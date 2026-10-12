@@ -1,0 +1,109 @@
+{
+  "metadata": {
+    "generatedAt": "2026-10-12T23:15:32.691950+00:00",
+    "gitCommit": "007b7262a536156884eb51bd77fba359fc0cfae2",
+    "randomSeed": 42,
+    "measured": true
+  },
+  "activeChampion": {
+    "version": "v1",
+    "name": "LightGBM Regressor (L1 Loss)",
+    "description": "Empirical champion trained on multi-store demand with 28 lag and rolling features",
+    "status": "CHAMPION",
+    "wape": 0.13,
+    "bias": 0.0011,
+    "mae": 6.35,
+    "rmse": 8.59,
+    "p50LatencyMs": 1.67,
+    "p95LatencyMs": 2.24,
+    "throughputRps": 598.8,
+    "circuitBreakerSlaSeconds": 2.0
+  },
+  "baseline": {
+    "name": "Seasonal Naive (7-day lag)",
+    "wape": 0.4029,
+    "bias": 0.0205,
+    "mae": 19.68,
+    "rmse": 32.06
+  },
+  "hierarchy": {
+    "stores": [
+      "CA_1",
+      "CA_2",
+      "TX_1",
+      "WI_1"
+    ],
+    "categories": [
+      "FOODS_1 (Dairy)",
+      "FOODS_2 (Bakery)",
+      "HOBBIES_1",
+      "HOUSEHOLD_1"
+    ],
+    "totalSkus": 10,
+    "timeHorizonDays": 15
+  },
+  "driftIncident": {
+    "status": "CRITICAL_DRIFT",
+    "maxPsi": 0.509,
+    "driftDetected": true,
+    "alertThreshold": 0.2,
+    "features": {
+      "sell_price": {
+        "psi": 0.2933,
+        "ks_statistic": 0.2392,
+        "ks_p_value": 0.0,
+        "status": "CRITICAL_DRIFT",
+        "baseline_mean": 6.52,
+        "current_mean": 8.48
+      },
+      "lag_1": {
+        "psi": 0.3022,
+        "ks_statistic": 0.233,
+        "ks_p_value": 0.0,
+        "status": "CRITICAL_DRIFT",
+        "baseline_mean": 46.86,
+        "current_mean": 34.59
+      },
+      "lag_7": {
+        "psi": 0.3011,
+        "ks_statistic": 0.233,
+        "ks_p_value": 0.0,
+        "status": "CRITICAL_DRIFT",
+        "baseline_mean": 46.88,
+        "current_mean": 34.63
+      },
+      "rolling_mean_7": {
+        "psi": 0.477,
+        "ks_statistic": 0.2743,
+        "ks_p_value": 0.0,
+        "status": "CRITICAL_DRIFT",
+        "baseline_mean": 46.86,
+        "current_mean": 34.6
+      },
+      "rolling_mean_28": {
+        "psi": 0.5089,
+        "ks_statistic": 0.2864,
+        "ks_p_value": 0.0,
+        "status": "CRITICAL_DRIFT",
+        "baseline_mean": 46.85,
+        "current_mean": 34.63
+      }
+    },
+    "decayReport": {
+      "currentWape": 0.1507,
+      "baselineWape": 0.13,
+      "relativeDecay": 0.159,
+      "normalizedBias": 0.0,
+      "alert": true
+    }
+  },
+  "shadowCandidate": {
+    "version": "v_shadow_20261012_231532",
+    "name": "LightGBM Shadow (Price-Shifted Slice)",
+    "wape": 0.1326,
+    "bias": 0.005,
+    "improvementVsStale": 0.054,
+    "wilcoxonPValue": 0.0074,
+    "gateStatus": "PROMOTED"
+  }
+}

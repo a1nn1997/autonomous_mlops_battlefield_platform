@@ -169,15 +169,31 @@ class OpenAIProvider(ILLMProvider):
             return {"provider": self.provider_name, "model": self.model, "text": None, "latency_ms": lat, "status": "ERROR"}
 
 class GeminiProvider(ILLMProvider):
-    """Adapter for Google Gemini API (gemini-3.8-flash-lite)."""
+    """
+    Adapter for Google Gemini API via official google-genai SDK.
+    Supports both Google Cloud Vertex AI (ADC / GOOGLE_CLOUD_PROJECT) and Google Developer API Keys.
+    """
 
-    def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None):
-        self.api_key = api_key
-        self.model = model or "gemini-3.8-flash-lite"
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        model: Optional[str] = None,
+        project: Optional[str] = None,
+        location: Optional[str] = None,
+        use_vertex: Optional[bool] = None
+    ):
+        self.api_key = api_key or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+        self.model = model or os.getenv("GEMINI_MODEL") or "gemini-2.5-flash"
+        self.project = project or os.getenv("GOOGLE_CLOUD_PROJECT") or os.getenv("GCP_PROJECT")
+        self.location = location or os.getenv("GOOGLE_CLOUD_LOCATION") or "us-central1"
+        self.use_vertex = use_vertex if use_vertex is not None else (
+            os.getenv("USE_VERTEX_AI", "false").lower() in ("true", "1") or bool(self.project)
+        )
+        self._client = None
 
     @property
     def provider_name(self) -> str:
-        return "Google Gemini"
+        return "Google Cloud Vertex AI" if self.use_vertex else "Google Gemini"
 
     @property
     def model_name(self) -> str:
@@ -185,7 +201,27 @@ class GeminiProvider(ILLMProvider):
 
     @property
     def has_valid_key(self) -> bool:
+        if self.use_vertex and self.project:
+            return True
         return bool(self.api_key and len(self.api_key.strip()) > 5)
+
+    def _get_client(self):
+        if self._client is not None:
+            return self._client
+        try:
+            from google import genai
+            if self.use_vertex:
+                self._client = genai.Client(
+                    vertexai=True,
+                    project=self.project,
+                    location=self.location
+                )
+            else:
+                self._client = genai.Client(api_key=self.api_key)
+            return self._client
+        except Exception as e:
+            logger.warning(f"Failed to initialize google-genai Client: {e}")
+            return None
 
     async def generate(
         self,
@@ -194,30 +230,60 @@ class GeminiProvider(ILLMProvider):
         timeout: float = 8.0
     ) -> Dict[str, Any]:
         start = time.perf_counter()
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key or ''}"
         user_text = "\n".join([f"{m['role'].upper()}: {m['content']}" for m in messages])
         if system_prompt:
             user_text = f"SYSTEM INSTRUCTION: {system_prompt}\n\n{user_text}"
 
-        payload = {
-            "contents": [{"parts": [{"text": user_text}]}],
-            "generationConfig": {"temperature": 0.2, "maxOutputTokens": 800}
-        }
-
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            resp = await client.post(url, json=payload)
-            lat = round((time.perf_counter() - start) * 1000.0, 2)
-            if resp.status_code == 200:
-                data = resp.json()
+        # 1. Attempt official google-genai SDK
+        try:
+            client = self._get_client()
+            if client is not None:
+                response = client.models.generate_content(
+                    model=self.model,
+                    contents=user_text,
+                )
+                lat = round((time.perf_counter() - start) * 1000.0, 2)
                 return {
                     "provider": self.provider_name,
                     "model": self.model,
-                    "text": data["candidates"][0]["content"]["parts"][0]["text"],
+                    "text": response.text,
                     "latency_ms": lat,
                     "status": "SUCCESS"
                 }
-            resp.raise_for_status()
-            return {"provider": self.provider_name, "model": self.model, "text": None, "latency_ms": lat, "status": "ERROR"}
+        except Exception as e:
+            logger.warning(f"google-genai SDK call failed: {e}. Falling back...")
+
+        # 2. HTTP Fallback if API key exists
+        if self.api_key:
+            try:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}"
+                payload = {
+                    "contents": [{"parts": [{"text": user_text}]}],
+                    "generationConfig": {"temperature": 0.2, "maxOutputTokens": 800}
+                }
+                async with httpx.AsyncClient(timeout=timeout) as http_client:
+                    resp = await http_client.post(url, json=payload)
+                    lat = round((time.perf_counter() - start) * 1000.0, 2)
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        return {
+                            "provider": self.provider_name,
+                            "model": self.model,
+                            "text": data["candidates"][0]["content"]["parts"][0]["text"],
+                            "latency_ms": lat,
+                            "status": "SUCCESS"
+                        }
+            except Exception:
+                pass
+
+        lat = round((time.perf_counter() - start) * 1000.0, 2)
+        return {
+            "provider": self.provider_name,
+            "model": self.model,
+            "text": None,
+            "latency_ms": lat,
+            "status": "ERROR"
+        }
 
 class DeterministicFallbackProvider(ILLMProvider):
     """Deterministic fallback provider guaranteeing 100% availability and zero SLA breach."""
@@ -259,14 +325,23 @@ class LLMProviderFactory:
         gemini_key: Optional[str],
         anthropic_model: Optional[str] = None,
         openai_model: Optional[str] = None,
-        gemini_model: Optional[str] = None
+        gemini_model: Optional[str] = None,
+        project: Optional[str] = None,
+        location: Optional[str] = None,
+        use_vertex: Optional[bool] = None
     ) -> ILLMProvider:
         if version == 1:
             return AnthropicProvider(api_key=anthropic_key, model=anthropic_model)
         elif version == 2:
             return OpenAIProvider(api_key=openai_key, model=openai_model)
         else:
-            return GeminiProvider(api_key=gemini_key, model=gemini_model)
+            return GeminiProvider(
+                api_key=gemini_key,
+                model=gemini_model,
+                project=project,
+                location=location,
+                use_vertex=use_vertex
+            )
 
 class LLMGateway:
     """
@@ -289,7 +364,11 @@ class LLMGateway:
 
         self.anthropic_model = os.getenv("ANTHROPIC_MODEL") or env_vars.get("ANTHROPIC_MODEL") or "claude-haiku-5-5"
         self.openai_model = os.getenv("OPENAI_MODEL") or env_vars.get("OPENAI_MODEL") or "gpt-6-luna"
-        self.gemini_model = os.getenv("GEMINI_MODEL") or env_vars.get("GEMINI_MODEL") or "gemini-3.8-flash-lite"
+        self.gemini_model = os.getenv("GEMINI_MODEL") or env_vars.get("GEMINI_MODEL") or "gemini-2.5-flash"
+
+        self.gcp_project = os.getenv("GOOGLE_CLOUD_PROJECT") or os.getenv("GCP_PROJECT") or env_vars.get("GOOGLE_CLOUD_PROJECT")
+        self.gcp_location = os.getenv("GOOGLE_CLOUD_LOCATION") or env_vars.get("GOOGLE_CLOUD_LOCATION") or "us-central1"
+        self.use_vertex = (os.getenv("USE_VERTEX_AI") or env_vars.get("USE_VERTEX_AI") or "false").lower() in ("true", "1")
 
         self.active_provider = LLMProviderFactory.create_provider(
             version=self.version,
@@ -298,7 +377,10 @@ class LLMGateway:
             gemini_key=self.gemini_key,
             anthropic_model=self.anthropic_model,
             openai_model=self.openai_model,
-            gemini_model=self.gemini_model
+            gemini_model=self.gemini_model,
+            project=self.gcp_project,
+            location=self.gcp_location,
+            use_vertex=self.use_vertex
         )
         self.provider = self.active_provider.provider_name
         self.model = self.active_provider.model_name

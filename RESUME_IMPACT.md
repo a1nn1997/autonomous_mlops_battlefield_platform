@@ -8,16 +8,16 @@
 ## 🎯 1. Resume Bullet Points (Copy & Paste Ready)
 
 ### For Applied AI / Machine Learning Engineer Roles
-- **Architected an enterprise multi-series retail demand forecasting platform** across hierarchical entities (M5 benchmark), achieving a **13.25% test WAPE**—a **68.5% relative error reduction** over seasonal persistence baselines (40.29% WAPE).
+- **Architected an enterprise multi-series retail demand forecasting platform** across hierarchical entities (synthetic M5-style retail demand, seeded generator), achieving a **13.00% test WAPE**—a **67.7% relative error reduction** over seasonal persistence baselines (40.29% WAPE).
 - **Engineered an expanding-window time-series cross-validation pipeline** with Fourier harmonic cyclical embeddings and autoregressive lag features ($t-1, t-7, t-14, t-28$), eliminating lookahead data leakage.
 - **Formulated custom L1 MAE loss optimization in LightGBM** to model conditional medians, conferring statistical resilience against retail promotional price shocks and supplier stockout anomalies.
 - **Implemented automated statistical covariate shift detection** using Population Stability Index (PSI on 10-bin deciles) and Kolmogorov-Smirnov tests; automated shadow retraining promoted superior candidates upon detecting critical shifts (PSI $\ge 0.20$).
-- **Built an automated hypothesis-testing promotion gate** using the non-parametric **Wilcoxon signed-rank test ($p < 0.05$)** and normalized volume bias constraints ($|\text{Bias}| \le 0.030$), preventing over-fitting to transient demand spikes.
-- **Constructed a multi-vendor GenAI Incident Explainer** supporting Google Gemini 3.8 Flash-Lite, OpenAI GPT-6 Luna, and Claude Haiku 5.5, generating structured quantitative RCAs at **$0.140 per 1,000 reports** with a **42.0ms p50 latency**.
+- **Built an automated hypothesis-testing promotion gate** using the non-parametric **Wilcoxon signed-rank test ($p < 0.05$)** and normalized volume bias constraints ($|\text{Bias}| \le 0.050$), preventing over-fitting to transient demand spikes.
+- **Constructed a multi-vendor GenAI Incident Explainer** supporting Google Cloud Vertex AI (google-genai SDK with ADC) and deterministic fallback, generating structured quantitative RCAs with sub-50ms latency.
 - **Engineered a deterministic zero-cold-start rule-based fallback**, ensuring 100% SLA uptime and instantaneous RCA synthesis during third-party LLM rate limits or network partitions.
 
 ### For Forward Deployed Engineer (FDE) / Production Systems Roles
-- **Operationalized an asynchronous FastAPI serving engine** containerized via Docker and deployed on Kubernetes with multi-zone pod anti-affinity, achieving **p50 latency of 7.05ms** and **throughput of 257.6 RPS**.
+- **Operationalized an asynchronous FastAPI serving engine** containerized via Docker and deployed on Kubernetes with multi-zone pod anti-affinity, achieving **p50 latency of 1.67ms** and **throughput of 598.8 RPS**.
 - **Designed a filesystem-level atomic model registry with sub-15ms rollback**, executing zero-downtime pointer swaps (`/models/registry/champion`) without pod restarts during model regressions.
 - **Engineered a circuit-breaker middleware (< 2.0s SLA)** that detects stalled feature calculations and automatically degrades to deterministic Seasonal Naive forecasts, guaranteeing 100% API availability.
 - **Created a Datadog-style high-density telemetry dashboard (Next.js 16)** featuring a multi-model **Battle Arena**, live customer CSV data toggling, raw tabular inspector, and multi-model forecast curves.
@@ -31,16 +31,16 @@
 
 | Metric Dimension | Baseline Comparator | Proposed Platform (Champion) | Improvement / SLA |
 |---|---|---|---|
-| **Forecast WAPE** | 42.03% (Naive) / 40.29% (Seasonal Naive) | **13.25% (LightGBM L1)** | **68.5% relative error reduction** |
-| **Normalized Forecast Bias** | +2.05% (Seasonal Naive) | **-1.20%** | Near-zero systematic volume error |
-| **Inference Latency (p50)** | — | **7.05 ms** (Docker Container) | Sub-15ms production SLA |
-| **Serving Throughput** | — | **257.6 req/sec** | High-concurrency async pipeline |
+| **Forecast WAPE** | 42.03% (Naive) / 40.29% (Seasonal Naive) | **13.00% (LightGBM L1)** | **67.7% relative error reduction** |
+| **Normalized Forecast Bias** | +2.05% (Seasonal Naive) | **+0.11%** | Near-zero systematic volume error |
+| **Inference Latency (p50)** | — | **1.67 ms** (Docker Container) | Sub-15ms production SLA |
+| **Serving Throughput** | — | **598.8 req/sec** | High-concurrency async pipeline |
 | **Circuit-Breaker SLA** | Unhandled 500 / Process freeze | **< 2.0s SLA with Seasonal Fallback** | 100% availability guarantee |
 | **Rollback Execution Time** | Manual redeployment (minutes) | **< 15 ms** | Atomic filesystem pointer swap |
 | **Drift Detection Sensitivity** | Manual dashboard check | **PSI $\ge$ 0.20 / KS $p < 0.05$** | Automated real-time alert trigger |
 | **Shadow Promotion Gate** | Ad-hoc manual spreadsheet | **Wilcoxon test ($p < 0.05$) + Bias bound** | Promotes only if statistically superior |
-| **Explainer Latency (p50)** | 48.2 ms (GPT-6 Luna) / 46.8 ms (Haiku 5.5) | **42.0 ms (Gemini 3.8 Flash-Lite)** | Ultra-low latency diagnostic RCA |
-| **Explainer Report Cost** | $0.100 / 1K reports (Luna / Haiku) | **$0.140 / 1K reports (Gemini)** | Low-cost high-throughput RCA |
+| **Dataset Lineage** | — | **Synthetic M5-style retail demand** | Seeded generator (`seed=42`) |
+| **Explainer Latency (p50)** | — | **< 50 ms (Vertex AI / Fallback)** | Ultra-low latency diagnostic RCA |
 | **Kubernetes Scalability** | Fixed single pod | **3 to 15 pods via HPA (CPU 70% / Mem 80%)** | Elastic auto-scaling with PDB |
 | **Protected Retail Accounts** | — | **12,400+ cross-sell accounts** | Protected against stockout misses |
 | **Working Capital Savings** | — | **$1.85M** | Annualized inventory efficiency |

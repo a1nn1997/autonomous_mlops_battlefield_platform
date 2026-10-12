@@ -49,6 +49,7 @@ class PredictionResponse(BaseModel):
     predictions: List[ItemPrediction]
     count: int
     latency_ms: float
+    served_by: str = "champion"
 
 class RollbackResponse(BaseModel):
     status: str

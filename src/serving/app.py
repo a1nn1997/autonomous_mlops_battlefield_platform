@@ -77,6 +77,7 @@ app.add_middleware(TimeoutMiddleware, timeout_seconds=settings.serving.timeout_s
 
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
+    """Liveness probe: returns 200 as long as service process is up."""
     uptime = time.time() - START_TIME
     status = "healthy" if active_model is not None else "degraded"
     return HealthResponse(
@@ -86,13 +87,28 @@ async def health_check():
         timestamp=datetime.datetime.now(datetime.timezone.utc).isoformat()
     )
 
+@app.get("/ready")
+async def readiness_check():
+    """Readiness probe: returns 200 when active champion model is loaded and ready."""
+    if active_model is None:
+        raise HTTPException(status_code=503, detail="Active champion model not ready.")
+    return {
+        "status": "ready",
+        "model_version": active_version_id,
+        "ready": True
+    }
+
 @app.get("/metrics")
 async def metrics_endpoint():
+    from src.serving.middleware import fallback_counter
     uptime = time.time() - START_TIME
     return PlainTextResponse(
         f"# HELP prediction_requests_total Total number of prediction requests\n"
         f"# TYPE prediction_requests_total counter\n"
         f"prediction_requests_total {request_count}\n"
+        f"# HELP prediction_fallback_total Total number of predictions served by fallback\n"
+        f"# TYPE prediction_fallback_total counter\n"
+        f"prediction_fallback_total {fallback_counter}\n"
         f"# HELP prediction_latency_seconds Latency of prediction requests\n"
         f"# TYPE prediction_latency_seconds histogram\n"
         f"prediction_latency_seconds_sum 0.042\n"
@@ -105,19 +121,45 @@ async def metrics_endpoint():
 @app.post("/predict", response_model=PredictionResponse)
 async def predict_endpoint(request: PredictionRequest):
     global request_count
+    import src.serving.middleware as mw
     start_t = time.perf_counter()
     request_count += 1
 
+    # If model is unavailable or exception happens during inference, fallback to seasonal naive (t-7)
     if active_model is None:
-        raise HTTPException(status_code=503, detail="No active forecasting model loaded in registry.")
+        mw.fallback_counter += 1
+        results = [
+            ItemPrediction(
+                store_id=it.store_id,
+                item_id=it.item_id,
+                predicted_sales=round(float(it.lag_7 if it.lag_7 is not None else it.lag_1), 2)
+            )
+            for it in request.items
+        ]
+        return PredictionResponse(
+            model_version="fallback_seasonal_naive",
+            predictions=results,
+            count=len(results),
+            latency_ms=round((time.perf_counter() - start_t) * 1000.0, 2),
+            served_by="fallback"
+        )
 
     items_data = [item.model_dump() for item in request.items]
     df = pd.DataFrame(items_data)
 
     try:
         preds = active_model.predict(df)
+        served_by = "champion"
+        version_used = active_version_id or "unknown"
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Prediction failed: {str(e)}")
+        # Graceful degradation on model prediction failure: return seasonal-naive fallback with HTTP 200
+        mw.fallback_counter += 1
+        served_by = "fallback"
+        version_used = "fallback_seasonal_naive"
+        preds = [
+            it.lag_7 if it.lag_7 is not None else it.lag_1
+            for it in request.items
+        ]
 
     results: List[ItemPrediction] = []
     for item, pred in zip(request.items, preds):
@@ -129,10 +171,11 @@ async def predict_endpoint(request: PredictionRequest):
 
     latency_ms = (time.perf_counter() - start_t) * 1000.0
     return PredictionResponse(
-        model_version=active_version_id or "unknown",
+        model_version=version_used,
         predictions=results,
         count=len(results),
-        latency_ms=round(latency_ms, 2)
+        latency_ms=round(latency_ms, 2),
+        served_by=served_by
     )
 
 @app.get("/models", response_model=ModelListResponse)

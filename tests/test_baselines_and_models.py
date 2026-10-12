@@ -65,22 +65,40 @@ def test_baselines_and_lightgbm():
 @pytest.mark.asyncio
 async def test_battle_service_direct():
     from src.battle_service import parse_csv_to_series, run_model_battle
-    csv_sample = "date,sales\n2023-01-01,100\n2023-01-02,120\n2023-01-03,115\n2023-01-04,130\n2023-01-05,140\n2023-01-06,125\n2023-01-07,110\n2023-01-08,105\n"
-    points = parse_csv_to_series(csv_sample)
-    assert len(points) == 8
+    short_csv = "date,sales\n2023-01-01,100\n2023-01-02,120\n"
+    points = parse_csv_to_series(short_csv)
+    assert len(points) == 2
     assert points[0]["actual"] == 100.0
-    assert "moving_avg" in points[0]
-    assert "ets" in points[0]
-    assert "lightgbm" in points[0]
 
-    # Test run_model_battle with custom dataset
-    payload = {
-        "activeDatasetId": "custom_1",
-        "datasets": [{"id": "custom_1", "name": "Custom Promo", "csvContent": csv_sample}],
+    # Test that < 60 rows raises ValueError with expected message
+    short_payload = {
+        "activeDatasetId": "custom_short",
+        "datasets": [{"id": "custom_short", "name": "Short Dataset", "csvContent": short_csv}],
         "selectedModels": ["lightgbm", "ets", "naive"]
+    }
+    with pytest.raises(ValueError, match="at least 60 rows"):
+        await run_model_battle(short_payload)
+
+    # Test run_model_battle with real models on >= 60 rows
+    dates = pd.date_range("2023-01-01", periods=70, freq="D")
+    sales = [50.0 + (i % 7) * 5.0 for i in range(70)]
+    csv_rows = ["date,sales,store_id,item_id"]
+    for d, s in zip(dates, sales):
+        csv_rows.append(f"{d.strftime('%Y-%m-%d')},{s},STORE_01,ITEM_001")
+    valid_csv = "\n".join(csv_rows)
+
+    payload = {
+        "activeDatasetId": "custom_real",
+        "datasets": [{"id": "custom_real", "name": "Real Training Data", "csvContent": valid_csv}],
+        "selectedModels": ["lightgbm", "ets", "naive", "s_naive", "moving_avg"]
     }
     battle_res = await run_model_battle(payload)
     assert "results" in battle_res
-    assert len(battle_res["results"]) == 3
-    assert "timeSeries" in battle_res
-    assert len(battle_res["timeSeries"]) == 8
+    assert len(battle_res["results"]) == 5
+    assert battle_res["measured"] is True
+    assert "champion" in battle_res
+    assert battle_res["champion"]["measured"] is True
+    assert battle_res["champion"]["latencyP50"] > 0
+    assert len(battle_res["timeSeries"]) > 0
+    # Deterministic metric sanity check
+    assert 0.0 <= battle_res["champion"]["wape"] <= 1.0

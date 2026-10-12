@@ -1,0 +1,48 @@
+{
+  "summary_table": [
+    {
+      "provider": "Rule-Based Deterministic Fallback",
+      "status": "DETERMINISTIC_FALLBACK",
+      "cases_evaluated": 4,
+      "diagnostic_accuracy": "100.0%",
+      "citation_adherence": "33.3%",
+      "latency_p50_ms": 0.0,
+      "latency_p95_ms": 159.5,
+      "cost_per_1k_reports_usd": "$0.000"
+    },
+    {
+      "provider": "OpenAI (GPT-4o-mini)",
+      "status": "NOT_RUN",
+      "cases_evaluated": 0,
+      "diagnostic_accuracy": "not run (API key not provided)",
+      "citation_adherence": "not run (API key not provided)",
+      "latency_p50_ms": 0.0,
+      "latency_p95_ms": 0.0,
+      "cost_per_1k_reports_usd": "$0.000"
+    }
+  ],
+  "details": {
+    "gemini": {
+      "provider": "Rule-Based Deterministic Fallback",
+      "status": "DETERMINISTIC_FALLBACK",
+      "cases_evaluated": 4,
+      "diagnostic_accuracy": "100.0%",
+      "citation_adherence": "33.3%",
+      "latency_p50_ms": 0.0,
+      "latency_p95_ms": 159.5,
+      "cost_per_1k_reports_usd": "$0.000"
+    },
+    "openai": {
+      "provider": "OpenAI (GPT-4o-mini)",
+      "status": "NOT_RUN",
+      "cases_evaluated": 0,
+      "diagnostic_accuracy": "not run (API key not provided)",
+      "citation_adherence": "not run (API key not provided)",
+      "latency_p50_ms": 0.0,
+      "latency_p95_ms": 0.0,
+      "cost_per_1k_reports_usd": "$0.000"
+    }
+  },
+  "sample_size": 4,
+  "total_golden_set_cases": 42
+}

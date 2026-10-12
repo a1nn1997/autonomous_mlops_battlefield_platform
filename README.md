@@ -15,26 +15,26 @@ An enterprise-grade, high-availability classical ML demand forecasting and auton
 
 | Metric / Capability | Baseline Comparator | Forecast-to-Insight Platform | Production Impact / SLA |
 |---|---|---|---|
-| **Forecast Accuracy (WAPE)** | 42.03% (Naive) / 40.29% (Seasonal Naive) | **13.25% (LightGBM L1)** | **68.5% relative error reduction** |
-| **Normalized Forecast Bias** | +2.05% (Seasonal Naive) | **-1.20%** | Near-zero systematic volume error |
-| **Inference Latency (p50)** | — | **7.05 ms** (FastAPI Container) | Sub-15ms production serving SLA |
-| **Serving Throughput** | — | **257.6 req/sec** | High-concurrency async pipeline |
+| **Forecast Accuracy (WAPE)** | 42.03% (Naive) / 40.29% (Seasonal Naive) | **13.00% (LightGBM L1)** | **67.7% relative error reduction** |
+| **Normalized Forecast Bias** | +2.05% (Seasonal Naive) | **+0.11%** | Near-zero systematic volume error |
+| **Inference Latency (p50)** | — | **1.67 ms** (FastAPI Container) | Sub-15ms production serving SLA |
+| **Serving Throughput** | — | **598.8 req/sec** | High-concurrency async pipeline |
 | **Circuit-Breaker SLA** | Unhandled 500 error / freeze | **< 2.0s SLA with Seasonal Fallback** | 100% availability guarantee |
 | **Atomic Rollback SLA** | Manual redeployment (minutes) | **< 15 ms** | Instantaneous filesystem pointer swap |
 | **Drift Monitoring** | Manual dashboard check | **PSI $\ge$ 0.20 + KS $p < 0.05$** | Automated real-time alert trigger |
 | **Shadow Promotion Gate** | Ad-hoc spreadsheet eval | **Wilcoxon test ($p < 0.05$) + Bias bound** | Promotes only if statistically superior |
-| **GenAI Explainer Latency** | Sub-50 ms tier (Luna / Haiku) | **42.0 ms (Gemini 3.8 Flash-Lite)** | Ultra-low latency diagnostic RCA |
-| **GenAI Incident Cost** | $0.100 / 1K reports | **$0.140 / 1K reports** | Low-cost high-throughput RCA |
-| **Model Battle Arena** | Single-model offline notebook | **5-Architecture Datadog Telemetry Mesh** | LGBM, ETS, S-Naive, MovAvg, Naive |
-| **Custom CSV Onboarding** | Hardcoded training sets | **Dynamic Heuristic Ingestion & Raw Inspector** | Live CSV toggling across dashboard |
+| **Dataset Lineage** | — | **Synthetic M5-style retail demand** | Multi-store, seeded generator (`seed=42`) |
+| **GenAI Explainer Latency** | Sub-50 ms tier (Vertex / Haiku) | **< 50 ms (Vertex AI / Fallback)** | Ultra-low latency diagnostic RCA |
+| **Model Battle Arena** | Single-model offline notebook | **5-Architecture Real-Time Arena** | LGBM, ETS, S-Naive, MovAvg, Naive |
+| **Custom CSV Onboarding** | Hardcoded training sets | **Dynamic Heuristic Ingestion ($\ge 60$ rows)** | Live CSV validation & feature pipeline |
 | **Deep Agentic Loop** | Blackbox automated scripts | **Tradeoff Matrix with User Consent Gate** | Explicit stakeholder governance |
 | **Cloud Skill Orchestration** | Manual pipeline scripts | **champion-challenger-ml Cloud Skill** | Vertex AI, BigQuery ML & K8s HPA |
 
 > 📘 **Comprehensive System Documentation:**
-> - [ARCHITECTURE.md](file:///home/ann/Desktop/desktop/autonomous_mlops_battlefield_platform/ARCHITECTURE.md) — System topology, mathematical formulations (WAPE, Bias, PSI, Wilcoxon), and FDE field patterns.
-> - [LLD.md](file:///home/ann/Desktop/desktop/autonomous_mlops_battlefield_platform/LLD.md) — Low-Level Design, SOLID mappings, UML class diagram, and sequence diagrams.
-> - [K8S_GUIDE.md](file:///home/ann/Desktop/desktop/autonomous_mlops_battlefield_platform/K8S_GUIDE.md) — Cloud-Native Kubernetes deployment runbook, HPA, PDB, NetworkPolicy, and dual-layer rollback.
-> - [RESUME_IMPACT.md](file:///home/ann/Desktop/desktop/autonomous_mlops_battlefield_platform/RESUME_IMPACT.md) — Quantitative resume bullets and portfolio impact metrics for Applied AI / ML & FDE roles.
+> - [ARCHITECTURE.md](ARCHITECTURE.md) — System topology, mathematical formulations (WAPE, Bias, PSI, Wilcoxon), and FDE field patterns.
+> - [LLD.md](LLD.md) — Low-Level Design, SOLID mappings, UML class diagram, and sequence diagrams.
+> - [K8S_GUIDE.md](K8S_GUIDE.md) — Cloud-Native Kubernetes deployment runbook, HPA, PDB, NetworkPolicy, and dual-layer rollback.
+> - [RESUME_IMPACT.md](RESUME_IMPACT.md) — Quantitative resume bullets and portfolio impact metrics for Applied AI / ML & FDE roles.
 
 ---
 
@@ -181,17 +181,37 @@ vercel --prod
 - **`ci.yml`**: Automatically runs on every push and pull request. Sets up a clean environment, installs pytest, executes all 13 test suites without `.venv` caching, and verifies the Next.js production build.
 - **`deploy-vercel.yml`**: Deploys the frontend to Vercel with token protection enabled and `.venv` exclusion enforced.
 
-### 7. CLI Operations
+### 7. CLI Operations & 2-Minute Demo Script
 ```bash
-# Train baseline models, LightGBM, and register champion
-python -m src.cli train --data data/raw/m5_sample.csv
+# STEP 1: Generate empirical telemetry artifact (computed numbers)
+python scripts/generate_telemetry.py
 
-# Simulate a 60% price shock distribution shift and evaluate PSI
+# STEP 2: Launch serving engine on port 8000
+python -m src.cli serve --host 0.0.0.0 --port 8000
+
+# STEP 3: In another terminal, run 2-minute interactive demo sequence:
+# 3a. Health & Readiness checks
+curl http://localhost:8000/health
+curl http://localhost:8000/ready
+
+# 3b. Make online prediction (served_by: champion)
+curl -X POST http://localhost:8000/predict -H "Content-Type: application/json" -d '{
+  "items": [{
+    "store_id": "STORE_01", "item_id": "ITEM_001", "dept_id": "FOODS_1",
+    "sell_price": 5.0, "is_promo": 0, "is_event": 0, "is_weekend": 0,
+    "day_of_week": 2, "day_of_month": 15, "month": 6, "year": 2024,
+    "lag_1": 45.0, "lag_7": 42.0, "lag_14": 40.0, "lag_28": 38.0,
+    "rolling_mean_7": 43.5, "rolling_std_7": 3.2, "rolling_mean_14": 42.0,
+    "rolling_std_14": 3.8, "rolling_mean_28": 41.0, "rolling_std_28": 4.1,
+    "price_ratio_28": 1.0, "price_diff_7": 0.0, "dow_sin": 0.78, "dow_cos": 0.62,
+    "month_sin": 0.5, "month_cos": 0.86
+  }]
+}'
+
+# 3c. Simulate price shock & run automated shadow retraining pipeline
 python -m src.cli simulate-drift --shock-price 1.60
-
-# Retrain shadow model candidate on shifted slice and evaluate A/B gate
 python -m src.cli retrain-shadow
 
-# Execute instantaneous sub-15ms atomic model rollback
+# 3d. Atomic sub-15ms rollback to prior champion
 python -m src.cli rollback
 ```

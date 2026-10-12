@@ -103,11 +103,27 @@ def test_fastapi_predict_endpoint(client):
     assert data["predictions"][0]["predicted_sales"] >= 0
     assert "model_version" in data
     assert data["latency_ms"] >= 0
+    assert data["served_by"] == "champion"
+
+    # Test /ready endpoint
+    ready_resp = client.get("/ready")
+    assert ready_resp.status_code == 200
+    assert ready_resp.json()["status"] == "ready"
+
+    # Test fallback degradation on model exception
+    from unittest.mock import patch
+    with patch("src.serving.app.active_model.predict", side_effect=RuntimeError("CUDA out of memory / Booster error")):
+        fail_resp = client.post("/predict", json=payload)
+        assert fail_resp.status_code == 200
+        fail_data = fail_resp.json()
+        assert fail_data["served_by"] == "fallback"
+        assert fail_data["predictions"][0]["predicted_sales"] == 42.0  # lag_7 value
 
 def test_fastapi_metrics_endpoint(client):
     resp = client.get("/metrics")
     assert resp.status_code == 200
     assert "prediction_requests_total" in resp.text
+    assert "prediction_fallback_total" in resp.text
     assert "prediction_latency_seconds" in resp.text
 
 def test_fastapi_api_agent_endpoint(client):

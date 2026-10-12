@@ -1,6 +1,6 @@
 {
-  "active_version": "v1",
-  "previous_version": "v_shadow_20261012_131516",
+  "active_version": "v_shadow_20261012_231532",
+  "previous_version": "v1",
   "history": [
     {
       "action": "promote",
@@ -37,22 +37,30 @@
       "from_version": "v_shadow_20261012_131516",
       "to_version": "v1",
       "timestamp": "2026-10-12T13:32:03.212856+00:00"
+    },
+    {
+      "action": "promote",
+      "version": "v1",
+      "from_version": "v1",
+      "timestamp": "2026-10-12T23:15:31.599359+00:00"
+    },
+    {
+      "action": "promote",
+      "version": "v_shadow_20261012_231532",
+      "from_version": "v1",
+      "timestamp": "2026-10-12T23:15:32.691037+00:00"
     }
   ],
   "versions": {
     "v1": {
       "version": "v1",
-      "created_at": "2026-10-12T13:15:15.576115+00:00",
-      "description": "Initial champion model",
+      "created_at": "2026-10-12T23:15:31.599359+00:00",
+      "description": "Empirical v1 Champion",
       "metrics": {
-        "wape": 0.1325,
-        "bias": -0.012,
-        "mae": 6.47,
-        "rmse": 8.93,
-        "total_actual": 89882.0,
-        "total_pred": 88802.85818744486
+        "wape": 0.13,
+        "bias": 0.0011
       },
-      "status": "champion",
+      "status": "retired",
       "feature_count": 27
     },
     "v_shadow_20261012_131516": {
@@ -68,6 +76,21 @@
         "total_pred": 22482.26851839439
       },
       "status": "rolled_back",
+      "feature_count": 27
+    },
+    "v_shadow_20261012_231532": {
+      "version": "v_shadow_20261012_231532",
+      "created_at": "2026-10-12T23:15:32.691037+00:00",
+      "description": "Auto-retrained candidate on drift alert (Feature/Prediction drift detected (Max PSI: 0.5089), WAPE decay exceeded threshold (15.9% increase))",
+      "metrics": {
+        "wape": 0.1326,
+        "bias": 0.005,
+        "mae": 5.15,
+        "rmse": 6.78,
+        "total_actual": 21767.0,
+        "total_pred": 21876.31667503169
+      },
+      "status": "champion",
       "feature_count": 27
     }
   }

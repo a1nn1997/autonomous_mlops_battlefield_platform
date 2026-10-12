@@ -107,12 +107,12 @@ export default function Home() {
     {
       id: "init-1",
       sender: "agent",
-      text: "👋 **Forecast Sentinel Agent online.**\nI am monitoring production demand traffic across 4 stores and 10 hierarchical SKUs.\n\nChampion **v1** is actively serving predictions with **13.25% test WAPE** (outperforming the seasonal naive baseline by **68.5%**).\n\nYou can chat with me or use the action pills below to inject drift, diagnose root cause, retrain shadow candidates, or run model battle tournaments.",
+      text: "👋 **Forecast Sentinel Agent online.**\nI am monitoring production demand traffic across 4 stores and 10 hierarchical SKUs.\n\nChampion **v1** is actively serving predictions with **13.00% test WAPE**.\n\nYou can chat with me or use the action pills below to inject drift, diagnose root cause, retrain shadow candidates, or run model battle tournaments.",
       toolCalls: [
         {
           tool: "telemetry.query_live_posture",
           args: { scope: "fleet" },
-          resultSummary: "Active Champion: v1 (13.25% WAPE, 257.6 RPS, p50: 7.05ms). All systems healthy.",
+          resultSummary: "Active Champion: v1 (13.00% WAPE, 598.8 RPS, p50: 1.67ms). All systems healthy.",
           durationMs: 6,
           status: "success",
         },
@@ -496,13 +496,13 @@ export default function Home() {
           <div className="glass-panel" style={{ padding: "14px 18px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "12px" }}>
             <div>
               <div style={{ fontSize: "10px", color: "var(--text-muted)", textTransform: "uppercase" }}>Inference p50</div>
-              <div style={{ fontSize: "15px", fontWeight: "700", color: "var(--accent-emerald)" }}>7.05 ms</div>
+              <div style={{ fontSize: "15px", fontWeight: "700", color: "var(--accent-emerald)" }}>1.67 ms</div>
               <div style={{ fontSize: "10px", color: "var(--text-muted)" }}>FastAPI Container</div>
             </div>
             <div>
               <div style={{ fontSize: "10px", color: "var(--text-muted)", textTransform: "uppercase" }}>Throughput</div>
-              <div style={{ fontSize: "15px", fontWeight: "700", color: "var(--accent-cyan)" }}>257.6 RPS</div>
-              <div style={{ fontSize: "10px", color: "var(--text-muted)" }}>20 Concurrent Workers</div>
+              <div style={{ fontSize: "15px", fontWeight: "700", color: "var(--accent-cyan)" }}>598.8 RPS</div>
+              <div style={{ fontSize: "10px", color: "var(--text-muted)" }}>Async Uvicorn Engine</div>
             </div>
             <div>
               <div style={{ fontSize: "10px", color: "var(--text-muted)", textTransform: "uppercase" }}>Circuit Breaker</div>

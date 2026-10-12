@@ -131,4 +131,37 @@ def get_golden_set() -> List[Dict[str, Any]]:
             "expected_citations": [str(psi), f"{wape:.2f}", f"{bias:+.2f}"]
         })
 
+    # Category 5: Adversarial & Stress Testing Edge Cases (Cases 33 - 42)
+    adversarial_scenarios = [
+        ("CASE_033", "Zero Sales Across Complete Category (Sensor Disconnection)", "lag_1", 0.89, 0.0, 1.00, -1.00, -1.0, "data_corruption", "outage"),
+        ("CASE_034", "Extreme 10,000x Price Keying Error Glitch", "sell_price", 0.95, 0.0, 0.92, 0.85, 1000.0, "data_corruption", "glitch"),
+        ("CASE_035", "Simultaneous Triple-Feature Covariate Drift Collision", "rolling_mean_28", 0.58, 0.00001, 0.44, 0.32, 0.8, "concept_drift", "overstock"),
+        ("CASE_036", "Leap Year Temporal Alignment Distortion (Feb 29)", "lag_7", 0.22, 0.015, 0.23, 0.08, 0.1, "temporal_anomaly", "minor_bias"),
+        ("CASE_037", "Sudden 100% SKU Delisting (Discontinued Line)", "lag_1", 0.72, 0.0, 0.85, -0.80, -1.0, "concept_drift", "stockout"),
+        ("CASE_038", "Flash Midnight Database Replication Desynchronization", "rolling_mean_7", 0.41, 0.0002, 0.38, 0.29, -0.4, "data_corruption", "outage"),
+        ("CASE_039", "Sudden Government Price Cap Imposition", "sell_price", 0.37, 0.0004, 0.33, -0.25, -0.35, "price_elasticity", "stockout"),
+        ("CASE_040", "Omnichannel Inventory Allocation Phantom Reservation", "lag_1", 0.39, 0.0003, 0.35, 0.22, -0.3, "data_corruption", "overstock"),
+        ("CASE_041", "Unprecedented 100-Year Flood Physical Distribution Severance", "rolling_mean_14", 0.65, 0.0, 0.52, 0.45, -0.9, "concept_drift", "outage"),
+        ("CASE_042", "High-Frequency Automated Algorithmic Arbitrage Bot Run", "is_promo", 0.62, 0.0, 0.50, -0.45, 3.5, "promo_surge", "stockout"),
+    ]
+
+    for cid, title, feat, psi, ks_p, wape, bias, delta, root_cause, impact in adversarial_scenarios:
+        cases.append({
+            "case_id": cid,
+            "title": title,
+            "incident_type": "ADVERSARIAL_EDGE_CASE",
+            "context": {
+                "incident_type": "ADVERSARIAL_ANOMALY",
+                "metrics": {"wape": wape, "bias": bias, "baseline_wape": 0.18},
+                "drift_report": {
+                    "max_psi": psi,
+                    "features": {feat: {"psi": psi, "ks_p_value": ks_p, "status": "CRITICAL_DRIFT", "baseline_mean": 25.0, "current_mean": round(max(0.1, 25.0 * (1 + delta)), 2)}}
+                },
+                "decay_report": {"current_wape": wape, "relative_decay": round((wape - 0.18) / 0.18, 3)}
+            },
+            "ground_truth_root_cause": root_cause,
+            "ground_truth_impact": impact,
+            "expected_citations": [str(psi), f"{wape:.2f}", f"{bias:+.2f}"]
+        })
+
     return cases

@@ -138,3 +138,20 @@ class RetailDemandDataset:
         df = generate_retail_data()
         df.to_csv(self.raw_path, index=False)
         return df
+
+    def load_m5_subset(self, m5_path: Optional[Path] = None, max_items: int = 10, max_stores: int = 4) -> pd.DataFrame:
+        """
+        Loads an authentic M5 competition subset if available on disk;
+        otherwise generates a synthetic M5-style retail demand dataset using seeded generator.
+        """
+        target = m5_path or (DATA_DIR / "raw" / "m5_sample.csv")
+        if target.exists():
+            df = pd.read_csv(target)
+            if "date" in df.columns:
+                df["date"] = pd.to_datetime(df["date"])
+            return df
+        return generate_retail_data(n_items=max_items, n_stores=max_stores)
+
+def load_m5_subset(m5_path: Optional[Path] = None, max_items: int = 10, max_stores: int = 4) -> pd.DataFrame:
+    """Convenience helper to load M5 subset or synthetic M5-style retail demand."""
+    return RetailDemandDataset().load_m5_subset(m5_path=m5_path, max_items=max_items, max_stores=max_stores)

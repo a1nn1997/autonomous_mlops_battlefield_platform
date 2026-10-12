@@ -47,3 +47,40 @@ def test_rolling_wape_decay():
     report = monitor.check_decay(baseline_wape=0.10, production_df=df)
     assert report["alert"] is True
     assert report["current_wape"] == 0.20
+
+def test_promotion_gate_decisions():
+    from src.metrics.gates import evaluate_promotion_gate
+    np.random.seed(42)
+    y_true = np.array([50.0 + i for i in range(30)])
+
+    # 1. Promote case: Challenger significantly better, low bias
+    # Both have low bias, challenger has much smaller error
+    champ_preds = y_true + np.where(np.arange(30) % 2 == 0, 8.0, -8.0)  # zero bias, error=8
+    chal_preds = y_true + np.where(np.arange(30) % 2 == 0, 1.0, -1.0)   # zero bias, error=1
+    res_promote = evaluate_promotion_gate(y_true, champ_preds, chal_preds, wilcoxon_alpha=0.05, max_absolute_bias=0.05)
+    assert res_promote["decision"] == "PROMOTED"
+    assert res_promote["is_promoted"] is True
+    assert res_promote["wilcoxon_p_value"] < 0.05
+
+    # 2. Reject worse: Challenger has worse WAPE
+    chal_worse = y_true + np.where(np.arange(30) % 2 == 0, 12.0, -12.0)
+    res_worse = evaluate_promotion_gate(y_true, champ_preds, chal_worse, wilcoxon_alpha=0.05, max_absolute_bias=0.05)
+    assert res_worse["decision"] == "REJECTED_WORSE_WAPE"
+    assert res_worse["is_promoted"] is False
+
+    # 3. Reject not significant: Challenger only has tiny, mixed jitter around champion
+    # e.g. very slight improvements on half the points, identical on rest
+    jitter = np.zeros(30)
+    jitter[0] = -0.5
+    jitter[1] = 0.5
+    chal_similar = champ_preds + jitter
+    res_not_sig = evaluate_promotion_gate(y_true, champ_preds, chal_similar, wilcoxon_alpha=0.01, max_absolute_bias=0.05)
+    assert res_not_sig["is_promoted"] is False
+    assert res_not_sig["decision"] in ["REJECTED_NOT_SIGNIFICANT", "REJECTED_WORSE_WAPE"]
+
+    # 4. Reject bias violation: Challenger achieves lower WAPE but violates bias bound
+    # e.g., large directional under-prediction
+    chal_biased = y_true * 0.92  # -8% bias, exceeding 5% bound
+    res_bias = evaluate_promotion_gate(y_true, champ_preds, chal_biased, wilcoxon_alpha=0.05, max_absolute_bias=0.05)
+    assert res_bias["decision"] == "REJECTED_BIAS_VIOLATION"
+    assert res_bias["is_promoted"] is False

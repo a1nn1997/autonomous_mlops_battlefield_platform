@@ -9,21 +9,51 @@ import httpx
 
 logger = logging.getLogger("forecast_serving")
 
+fallback_counter: int = 0
+
 class TimeoutMiddleware(BaseHTTPMiddleware):
     """
-    Terminates long-running inference requests exceeding timeout_seconds
-    with HTTP 504 Gateway Timeout.
+    Terminates long-running inference requests exceeding timeout_seconds.
+    For /predict, gracefully returns a Seasonal Naive (t-7) fallback with HTTP 200 and served_by: fallback.
     """
     def __init__(self, app, timeout_seconds: float = 2.0):
         super().__init__(app)
         self.timeout_seconds = timeout_seconds
 
     async def dispatch(self, request: Request, call_next: Callable):
+        global fallback_counter
         timeout = self.timeout_seconds if request.url.path.startswith("/predict") else 30.0
         try:
             return await asyncio.wait_for(call_next(request), timeout=timeout)
         except asyncio.TimeoutError:
-            logger.error(f"Request {request.url.path} timed out after {timeout}s")
+            logger.error(f"Request {request.url.path} timed out after {timeout}s. Engaging seasonal-naive fallback.")
+            if request.url.path.startswith("/predict"):
+                fallback_counter += 1
+                try:
+                    body = await request.json()
+                    items = body.get("items", [])
+                    fallback_preds = []
+                    for it in items:
+                        val = it.get("lag_7")
+                        if val is None:
+                            val = it.get("lag_1", 25.0)
+                        fallback_preds.append({
+                            "store_id": it.get("store_id", "STORE_01"),
+                            "item_id": it.get("item_id", "ITEM_001"),
+                            "predicted_sales": round(float(val), 2)
+                        })
+                    return JSONResponse(
+                        status_code=200,
+                        content={
+                            "model_version": "fallback_seasonal_naive",
+                            "predictions": fallback_preds,
+                            "count": len(fallback_preds),
+                            "latency_ms": round(timeout * 1000.0, 2),
+                            "served_by": "fallback"
+                        }
+                    )
+                except Exception:
+                    pass
             return JSONResponse(
                 status_code=504,
                 content={"detail": f"Request processing timed out after {timeout} seconds"}

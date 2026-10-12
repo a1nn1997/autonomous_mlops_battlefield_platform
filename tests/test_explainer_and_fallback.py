@@ -40,3 +40,32 @@ def test_explainer_benchmark():
     results = benchmark.run_benchmark(sample_size=4)
     assert "summary_table" in results
     assert len(results["summary_table"]) == 2
+
+@pytest.mark.asyncio
+async def test_vertex_ai_adapter_and_fallback():
+    from src.llm_gateway import GeminiProvider
+    from unittest.mock import MagicMock, patch
+
+    # 1. Test fallback when no credentials/keys exist
+    provider = GeminiProvider(api_key=None, project=None, use_vertex=False)
+    assert provider.model_name == "gemini-2.5-flash"
+    assert provider.has_valid_key is False
+    res = await provider.generate([{"role": "user", "content": "hello"}])
+    assert res["status"] in ("ERROR", "FALLBACK")
+
+    # 2. Test Vertex AI client with mocked google.genai Client
+    with patch("google.genai.Client") as mock_client_cls:
+        mock_instance = MagicMock()
+        mock_response = MagicMock()
+        mock_response.text = "Vertex AI generated response"
+        mock_instance.models.generate_content.return_value = mock_response
+        mock_client_cls.return_value = mock_instance
+
+        vertex_provider = GeminiProvider(project="test-project", location="us-central1", use_vertex=True)
+        assert vertex_provider.provider_name == "Google Cloud Vertex AI"
+        assert vertex_provider.has_valid_key is True
+
+        gen_res = await vertex_provider.generate([{"role": "user", "content": "analyze drift"}])
+        assert gen_res["status"] == "SUCCESS"
+        assert gen_res["text"] == "Vertex AI generated response"
+        assert gen_res["provider"] == "Google Cloud Vertex AI"

@@ -89,13 +89,21 @@ class RetrainingPipeline:
 
         wape_improvement = (champ_val_eval["wape"] - shadow_val_eval["wape"]) / max(0.01, champ_val_eval["wape"])
 
-        # Step 5: Promotion Gate
-        # Promote if candidate achieves strictly lower WAPE on the shifted slice
+        # Step 5: Promotion Gate with statistical significance and bias bounds
+        from src.metrics.gates import evaluate_promotion_gate
+        gate_res = evaluate_promotion_gate(
+            y_true=val_y_true,
+            champ_preds=champ_val_preds,
+            chal_preds=shadow_val_preds,
+            wape_improvement_threshold=0.0,
+            wilcoxon_alpha=settings.drift.ks_significance_level,
+            max_absolute_bias=0.05
+        )
+
         timestamp_str = datetime.datetime.utcnow().strftime("%Y%m%d_%H%M%S")
         candidate_version = f"v_shadow_{timestamp_str}"
-
-        promote = shadow_val_eval["wape"] < champ_val_eval["wape"]
-        gate_decision = "PROMOTED" if promote else "REJECTED"
+        promote = gate_res["is_promoted"]
+        gate_decision = gate_res["decision"]
 
         self.registry.register(
             version=candidate_version,

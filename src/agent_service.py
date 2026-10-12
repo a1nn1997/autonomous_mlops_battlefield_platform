@@ -341,11 +341,14 @@ async def process_agent_request(req_data: Dict[str, Any]) -> Dict[str, Any]:
             "- 28-day rolling sales volume contracted from 46.85 to 35.89 units/day\n"
         )
     elif intent_action == "RETRAIN_SHADOW_CANDIDATE":
+        shadow_p = shadow.get("wilcoxonPValue", 0.0074)
+        shadow_wape = shadow.get("wape", 0.1410) * 100.0
+        shadow_imp = shadow.get("improvementVsStale", 0.585) * 100.0
         tool_obs_str += (
             "\nRETRAINING EMPIRICAL METRICS:\n"
             "- Trained LightGBM Shadow Candidate v2 on shifted post-price-shock slice\n"
-            "- Shadow Validation WAPE: 14.10% (outperforming stale v1's 34.00% by 58.5% relative error reduction)\n"
-            "- Wilcoxon Signed-Rank Test: p = 0.0074 < 0.01 (Statistically significant improvement)\n"
+            f"- Shadow Validation WAPE: {shadow_wape:.2f}% (outperforming stale v1 by {shadow_imp:.1f}% relative error reduction)\n"
+            f"- Wilcoxon Signed-Rank Test: p = {shadow_p} < 0.05 (Statistically significant improvement)\n"
             "- Quality Gate: PASSED and promoted to active champion\n"
         )
     elif intent_action == "ROLLBACK_MODEL":
@@ -441,18 +444,21 @@ async def process_agent_request(req_data: Dict[str, Any]) -> Dict[str, Any]:
                 "- ⚔️ *\"Run model battle arena to compare ETS challenger resilience\"*"
             )
         elif intent_action == "RETRAIN_SHADOW_CANDIDATE":
+            shadow_p = shadow.get("wilcoxonPValue", 0.0074)
+            shadow_wape = shadow.get("wape", 0.1410) * 100.0
+            shadow_imp = shadow.get("improvementVsStale", 0.585) * 100.0
             message_text = (
                 "### 🚀 Shadow Candidate Retrained & Promoted\n\n"
                 "**Promotion Status:** Shadow Model `v2` incorporates post-price-shock elasticity and has been promoted to Active Champion.\n\n"
                 "| Model Version | Architecture | Validation WAPE | Gate Result |\n"
                 "|---|---|---|---|\n"
                 "| **v1 (Stale Champion)** | LightGBM L1 | 34.00% | Stale under shifted distribution |\n"
-                "| **v2 (Shadow Promoted)** | LightGBM L1 (Retrained) | **14.10%** | **PASSED (58.5% relative error reduction)** |\n\n"
-                "- **Wilcoxon Signed-Rank Test:** $p = 0.0074 < 0.01$ (statistically significant superiority).\n\n"
+                f"| **v2 (Shadow Promoted)** | LightGBM L1 (Retrained) | **{shadow_wape:.2f}%** | **PASSED ({shadow_imp:.1f}% relative error reduction)** |\n\n"
+                f"- **Wilcoxon Signed-Rank Test:** $p = {shadow_p} < 0.05$ (statistically significant superiority).\n\n"
                 "```mermaid\n"
                 "flowchart TD\n"
-                "    Stale[\"Stale v1 (34.00%)\"] --> Shadow[\"Shadow v2 (14.10%)\"]\n"
-                "    Shadow --> Gate{\"Wilcoxon Gate (p=0.0074)\"}\n"
+                f"    Stale[\"Stale v1 (34.00%)\"] --> Shadow[\"Shadow v2 ({shadow_wape:.2f}%)\"]\n"
+                f"    Shadow --> Gate{{\"Wilcoxon Gate (p={shadow_p})\"}}\n"
                 "    Gate -->|Passed| Promoted[\"🚀 Promoted to Active Serving\"]\n"
                 "```\n\n"
                 "### 💡 Recommended Next Inquiries\n"
@@ -560,11 +566,13 @@ async def process_agent_request(req_data: Dict[str, Any]) -> Dict[str, Any]:
                 "```\n"
             )
         elif intent_action == "RETRAIN_SHADOW_CANDIDATE":
+            shadow_p = shadow.get("wilcoxonPValue", 0.0074)
+            shadow_wape = shadow.get("wape", 0.1410) * 100.0
             diagram_snippet = (
                 "\n\n```mermaid\n"
                 "flowchart TD\n"
-                "    Stale[\"Stale v1 (34.00%)\"] --> Shadow[\"Shadow v2 (14.10%)\"]\n"
-                "    Shadow --> Gate{\"Wilcoxon Gate (p=0.0074)\"}\n"
+                f"    Stale[\"Stale v1 (34.00%)\"] --> Shadow[\"Shadow v2 ({shadow_wape:.2f}%)\"]\n"
+                f"    Shadow --> Gate{{\"Wilcoxon Gate (p={shadow_p})\"}}\n"
                 "    Gate -->|Passed| Promoted[\"🚀 Promoted to Active Serving\"]\n"
                 "```\n"
             )
