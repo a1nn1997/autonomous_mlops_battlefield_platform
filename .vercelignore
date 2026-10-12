@@ -1,0 +1,27 @@
+# Vercel Ignore File - Strictly Exclude Python Virtual Environment and Heavy Artifacts
+.venv/
+venv/
+env/
+.env
+.env.local
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+tests/
+test_env/
+data/raw/
+models/registry/
+scripts/
+k8s/
+.dockerignore
+Dockerfile
+docker-compose.yml
+poetry.lock
+*.webp
+*.png
+*.log
+
+# Git & Customizations
+.git/
+.agents/

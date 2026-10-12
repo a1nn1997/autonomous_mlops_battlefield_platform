@@ -1,0 +1,12 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "buildCommand": "cd ui && npm run build",
+  "outputDirectory": "ui/.next",
+  "installCommand": "cd ui && npm install",
+  "env": {
+    "DETERMINISTIC_PROD_MODE": "true",
+    "NODE_ENV": "production",
+    "BACKEND_URL": "http://127.0.0.1:8000"
+  }
+}

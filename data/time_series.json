@@ -1,0 +1,53 @@
+{
+  "baseHorizon": [
+    { "date": "2024-05-01", "actual": 44, "forecast": 43.1, "naive": 41, "s_naive": 42, "isDrift": false },
+    { "date": "2024-05-02", "actual": 48, "forecast": 46.8, "naive": 44, "s_naive": 46, "isDrift": false },
+    { "date": "2024-05-03", "actual": 56, "forecast": 54.2, "naive": 48, "s_naive": 53, "isDrift": false },
+    { "date": "2024-05-04", "actual": 68, "forecast": 67.5, "naive": 56, "s_naive": 65, "isDrift": false },
+    { "date": "2024-05-05", "actual": 72, "forecast": 71.0, "naive": 68, "s_naive": 70, "isDrift": false },
+    { "date": "2024-05-06", "actual": 46, "forecast": 45.3, "naive": 72, "s_naive": 45, "isDrift": false },
+    { "date": "2024-05-07", "actual": 43, "forecast": 42.8, "naive": 46, "s_naive": 44, "isDrift": false },
+    { "date": "2024-05-08", "actual": 45, "forecast": 44.5, "naive": 43, "s_naive": 43, "isDrift": false },
+    { "date": "2024-05-09", "actual": 51, "forecast": 49.8, "naive": 45, "s_naive": 49, "isDrift": false },
+    { "date": "2024-05-10", "actual": 59, "forecast": 57.9, "naive": 51, "s_naive": 57, "isDrift": false },
+    { "date": "2024-05-11", "actual": 70, "forecast": 69.1, "naive": 59, "s_naive": 68, "isDrift": false },
+    { "date": "2024-05-12", "actual": 74, "forecast": 73.0, "naive": 70, "s_naive": 72, "isDrift": false },
+    { "date": "2024-05-13", "actual": 47, "forecast": 46.2, "naive": 74, "s_naive": 46, "isDrift": false },
+    { "date": "2024-05-14", "actual": 44, "forecast": 43.6, "naive": 47, "s_naive": 43, "isDrift": false },
+    { "date": "2024-05-15", "actual": 48, "forecast": 46.9, "naive": 44, "s_naive": 45, "isDrift": false }
+  ],
+  "driftHorizon": [
+    { "date": "2024-05-01", "actual": 44, "forecast": 43.1, "naive": 41, "s_naive": 42, "isDrift": false },
+    { "date": "2024-05-02", "actual": 48, "forecast": 46.8, "naive": 44, "s_naive": 46, "isDrift": false },
+    { "date": "2024-05-03", "actual": 56, "forecast": 54.2, "naive": 48, "s_naive": 53, "isDrift": false },
+    { "date": "2024-05-04", "actual": 68, "forecast": 67.5, "naive": 56, "s_naive": 65, "isDrift": false },
+    { "date": "2024-05-05", "actual": 72, "forecast": 71.0, "naive": 68, "s_naive": 70, "isDrift": false },
+    { "date": "2024-05-06", "actual": 32, "forecast": 45.3, "naive": 72, "s_naive": 45, "isDrift": true },
+    { "date": "2024-05-07", "actual": 28, "forecast": 42.8, "naive": 32, "s_naive": 44, "isDrift": true },
+    { "date": "2024-05-08", "actual": 30, "forecast": 44.5, "naive": 28, "s_naive": 43, "isDrift": true },
+    { "date": "2024-05-09", "actual": 35, "forecast": 49.8, "naive": 30, "s_naive": 49, "isDrift": true },
+    { "date": "2024-05-10", "actual": 39, "forecast": 57.9, "naive": 35, "s_naive": 57, "isDrift": true },
+    { "date": "2024-05-11", "actual": 48, "forecast": 69.1, "naive": 39, "s_naive": 68, "isDrift": true },
+    { "date": "2024-05-12", "actual": 51, "forecast": 73.0, "naive": 48, "s_naive": 72, "isDrift": true },
+    { "date": "2024-05-13", "actual": 31, "forecast": 46.2, "naive": 51, "s_naive": 46, "isDrift": true },
+    { "date": "2024-05-14", "actual": 29, "forecast": 43.6, "naive": 31, "s_naive": 43, "isDrift": true },
+    { "date": "2024-05-15", "actual": 33, "forecast": 46.9, "naive": 29, "s_naive": 45, "isDrift": true }
+  ],
+  "retrainedHorizon": [
+    { "date": "2024-05-01", "actual": 44, "forecast": 43.1, "naive": 41, "s_naive": 42, "isDrift": false },
+    { "date": "2024-05-02", "actual": 48, "forecast": 46.8, "naive": 44, "s_naive": 46, "isDrift": false },
+    { "date": "2024-05-03", "actual": 56, "forecast": 54.2, "naive": 48, "s_naive": 53, "isDrift": false },
+    { "date": "2024-05-04", "actual": 68, "forecast": 67.5, "naive": 56, "s_naive": 65, "isDrift": false },
+    { "date": "2024-05-05", "actual": 72, "forecast": 71.0, "naive": 68, "s_naive": 70, "isDrift": false },
+    { "date": "2024-05-06", "actual": 32, "forecast": 32.8, "naive": 72, "s_naive": 45, "isDrift": false },
+    { "date": "2024-05-07", "actual": 28, "forecast": 28.5, "naive": 32, "s_naive": 44, "isDrift": false },
+    { "date": "2024-05-08", "actual": 30, "forecast": 30.2, "naive": 28, "s_naive": 43, "isDrift": false },
+    { "date": "2024-05-09", "actual": 35, "forecast": 34.6, "naive": 30, "s_naive": 49, "isDrift": false },
+    { "date": "2024-05-10", "actual": 39, "forecast": 39.4, "naive": 35, "s_naive": 57, "isDrift": false },
+    { "date": "2024-05-11", "actual": 48, "forecast": 47.6, "naive": 39, "s_naive": 68, "isDrift": false },
+    { "date": "2024-05-12", "actual": 51, "forecast": 50.8, "naive": 48, "s_naive": 72, "isDrift": false },
+    { "date": "2024-05-13", "actual": 31, "forecast": 31.2, "naive": 51, "s_naive": 46, "isDrift": false },
+    { "date": "2024-05-14", "actual": 29, "forecast": 29.3, "naive": 31, "s_naive": 43, "isDrift": false },
+    { "date": "2024-05-15", "actual": 33, "forecast": 32.7, "naive": 29, "s_naive": 45, "isDrift": false }
+  ]
+}

@@ -1,0 +1,29 @@
+data:
+  n_items: 10
+  n_stores: 4
+  start_date: "2023-01-01"
+  end_date: "2024-06-30"
+  train_end_date: "2024-03-31"
+  val_end_date: "2024-05-15"
+  test_end_date: "2024-06-30"
+
+features:
+  lags: [1, 7, 14, 28]
+  rolling_windows: [7, 14, 28]
+
+model:
+  learning_rate: 0.05
+  num_leaves: 31
+  n_estimators: 150
+
+serving:
+  host: "0.0.0.0"
+  port: 8000
+  timeout_seconds: 2.0
+  max_retries: 3
+
+drift:
+  psi_warning_threshold: 0.10
+  psi_critical_threshold: 0.20
+  ks_significance_level: 0.05
+  wape_decay_threshold: 0.15

@@ -1,0 +1,50 @@
+name: Deploy to Vercel (Production Token Shield)
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  deploy-to-vercel:
+    name: Deploy to Vercel (Excluding .venv)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Clean Environment Check (Ensure No .venv Exported)
+        run: |
+          echo "Verifying .venv exclusion..."
+          find . -maxdepth 2 -name ".venv" -exec rm -rf {} + || true
+          echo ".venv strictly removed before export."
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+          cache-dependency-path: "ui/package-lock.json"
+
+      - name: Install Frontend Dependencies
+        working-directory: ./ui
+        run: npm ci
+
+      - name: Build Next.js Bundle (Deterministic Prod Mode)
+        working-directory: ./ui
+        env:
+          DETERMINISTIC_PROD_MODE: "true"
+          NODE_ENV: "production"
+        run: npm run build
+
+      - name: Deploy to Vercel Action
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: "--prod"
+          working-directory: ./ui
+        env:
+          DETERMINISTIC_PROD_MODE: "true"

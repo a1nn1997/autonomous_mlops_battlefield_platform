@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "env": {
+    "DETERMINISTIC_PROD_MODE": "true",
+    "NODE_ENV": "production",
+    "BACKEND_URL": "http://127.0.0.1:8000"
+  }
+}

@@ -1,0 +1,59 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: autonomous_mlops_backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - PORT=${PORT:-8000}
+      - HOST=${HOST:-0.0.0.0}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - VERSION=${VERSION:-1}
+      - ANTHROPIC_MODEL=${ANTHROPIC_MODEL:-claude-haiku-5-5}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-6-luna}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-3.8-flash-lite}
+      - DETERMINISTIC_PROD_MODE=${DETERMINISTIC_PROD_MODE:-false}
+    volumes:
+      - ./models/registry:/app/models/registry
+      - ./data:/app/data
+    networks:
+      - mlops_net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+  ui:
+    build:
+      context: ./ui
+      dockerfile: Dockerfile
+    container_name: autonomous_mlops_ui
+    ports:
+      - "3000:3000"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - BACKEND_URL=${BACKEND_URL:-http://backend:8000}
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - mlops_net
+    restart: unless-stopped
+
+networks:
+  mlops_net:
+    driver: bridge

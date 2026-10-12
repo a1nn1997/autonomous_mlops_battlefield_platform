@@ -1,0 +1,71 @@
+{
+  "m5_sample": {
+    "id": "m5_sample",
+    "name": "M5 Retail Demand (Multi-Category Hierarchy)",
+    "items": 10,
+    "stores": 4,
+    "series": [
+      { "date": "2024-05-01", "actual": 44, "lightgbm": 43.1, "ets": 39.5, "s_naive": 42, "naive": 41, "moving_avg": 41.8 },
+      { "date": "2024-05-02", "actual": 48, "lightgbm": 46.8, "ets": 43.2, "s_naive": 46, "naive": 44, "moving_avg": 44.5 },
+      { "date": "2024-05-03", "actual": 56, "lightgbm": 54.2, "ets": 50.1, "s_naive": 53, "naive": 48, "moving_avg": 49.3 },
+      { "date": "2024-05-04", "actual": 68, "lightgbm": 67.5, "ets": 61.4, "s_naive": 65, "naive": 56, "moving_avg": 54.0 },
+      { "date": "2024-05-05", "actual": 72, "lightgbm": 71.0, "ets": 64.8, "s_naive": 70, "naive": 68, "moving_avg": 57.6 },
+      { "date": "2024-05-06", "actual": 46, "lightgbm": 45.3, "ets": 42.1, "s_naive": 45, "naive": 72, "moving_avg": 55.7 },
+      { "date": "2024-05-07", "actual": 43, "lightgbm": 42.8, "ets": 40.0, "s_naive": 44, "naive": 46, "moving_avg": 53.9 },
+      { "date": "2024-05-08", "actual": 45, "lightgbm": 44.5, "ets": 41.2, "s_naive": 43, "naive": 43, "moving_avg": 54.0 },
+      { "date": "2024-05-09", "actual": 51, "lightgbm": 49.8, "ets": 46.5, "s_naive": 49, "naive": 45, "moving_avg": 54.4 },
+      { "date": "2024-05-10", "actual": 59, "lightgbm": 57.9, "ets": 52.8, "s_naive": 57, "naive": 51, "moving_avg": 54.9 },
+      { "date": "2024-05-11", "actual": 70, "lightgbm": 69.1, "ets": 63.5, "s_naive": 68, "naive": 59, "moving_avg": 55.1 },
+      { "date": "2024-05-12", "actual": 74, "lightgbm": 73.0, "ets": 66.2, "s_naive": 72, "naive": 70, "moving_avg": 55.4 },
+      { "date": "2024-05-13", "actual": 47, "lightgbm": 46.2, "ets": 43.0, "s_naive": 46, "naive": 74, "moving_avg": 55.6 },
+      { "date": "2024-05-14", "actual": 44, "lightgbm": 43.6, "ets": 41.1, "s_naive": 43, "naive": 47, "moving_avg": 55.7 },
+      { "date": "2024-05-15", "actual": 48, "lightgbm": 46.9, "ets": 44.0, "s_naive": 45, "naive": 44, "moving_avg": 56.1 }
+    ]
+  },
+  "grocery_promo": {
+    "id": "grocery_promo",
+    "name": "Fast-Moving Grocery (+45% Promo Elasticity Surge)",
+    "items": 8,
+    "stores": 3,
+    "series": [
+      { "date": "2024-05-01", "actual": 82, "lightgbm": 80.5, "ets": 71.0, "s_naive": 78, "naive": 76, "moving_avg": 74.2 },
+      { "date": "2024-05-02", "actual": 88, "lightgbm": 86.2, "ets": 75.4, "s_naive": 84, "naive": 82, "moving_avg": 77.0 },
+      { "date": "2024-05-03", "actual": 124, "lightgbm": 120.1, "ets": 92.5, "s_naive": 95, "naive": 88, "moving_avg": 86.4 },
+      { "date": "2024-05-04", "actual": 156, "lightgbm": 151.8, "ets": 108.2, "s_naive": 110, "naive": 124, "moving_avg": 101.8 },
+      { "date": "2024-05-05", "actual": 162, "lightgbm": 158.4, "ets": 114.0, "s_naive": 118, "naive": 156, "moving_avg": 122.4 },
+      { "date": "2024-05-06", "actual": 94, "lightgbm": 92.1, "ets": 88.0, "s_naive": 90, "naive": 162, "moving_avg": 117.7 },
+      { "date": "2024-05-07", "actual": 86, "lightgbm": 84.9, "ets": 78.4, "s_naive": 82, "naive": 94, "moving_avg": 113.1 },
+      { "date": "2024-05-08", "actual": 90, "lightgbm": 88.2, "ets": 81.0, "s_naive": 86, "naive": 86, "moving_avg": 114.3 },
+      { "date": "2024-05-09", "actual": 95, "lightgbm": 93.0, "ets": 85.2, "s_naive": 91, "naive": 90, "moving_avg": 115.3 },
+      { "date": "2024-05-10", "actual": 135, "lightgbm": 131.2, "ets": 102.0, "s_naive": 104, "naive": 95, "moving_avg": 116.8 },
+      { "date": "2024-05-11", "actual": 172, "lightgbm": 167.9, "ets": 119.5, "s_naive": 120, "naive": 135, "moving_avg": 124.7 },
+      { "date": "2024-05-12", "actual": 180, "lightgbm": 175.0, "ets": 124.0, "s_naive": 128, "naive": 172, "moving_avg": 135.2 },
+      { "date": "2024-05-13", "actual": 102, "lightgbm": 99.8, "ets": 92.0, "s_naive": 94, "naive": 180, "moving_avg": 136.1 },
+      { "date": "2024-05-14", "actual": 92, "lightgbm": 90.1, "ets": 83.5, "s_naive": 86, "naive": 102, "moving_avg": 130.4 },
+      { "date": "2024-05-15", "actual": 98, "lightgbm": 96.0, "ets": 87.2, "s_naive": 90, "naive": 92, "moving_avg": 125.1 }
+    ]
+  },
+  "beverage_spikes": {
+    "id": "beverage_spikes",
+    "name": "Summer Beverage (High Volatility Spikes)",
+    "items": 6,
+    "stores": 2,
+    "series": [
+      { "date": "2024-05-01", "actual": 25, "lightgbm": 26.1, "ets": 24.0, "s_naive": 23, "naive": 22, "moving_avg": 23.5 },
+      { "date": "2024-05-02", "actual": 28, "lightgbm": 29.0, "ets": 26.5, "s_naive": 27, "naive": 25, "moving_avg": 25.0 },
+      { "date": "2024-05-03", "actual": 75, "lightgbm": 71.4, "ets": 42.0, "s_naive": 40, "naive": 28, "moving_avg": 34.2 },
+      { "date": "2024-05-04", "actual": 92, "lightgbm": 88.5, "ets": 55.0, "s_naive": 58, "naive": 75, "moving_avg": 48.7 },
+      { "date": "2024-05-05", "actual": 98, "lightgbm": 94.2, "ets": 60.1, "s_naive": 65, "naive": 92, "moving_avg": 63.6 },
+      { "date": "2024-05-06", "actual": 34, "lightgbm": 35.8, "ets": 32.0, "s_naive": 31, "naive": 98, "moving_avg": 60.4 },
+      { "date": "2024-05-07", "actual": 29, "lightgbm": 30.5, "ets": 28.5, "s_naive": 27, "naive": 34, "moving_avg": 55.9 },
+      { "date": "2024-05-08", "actual": 31, "lightgbm": 32.2, "ets": 29.8, "s_naive": 30, "naive": 29, "moving_avg": 57.8 },
+      { "date": "2024-05-09", "actual": 36, "lightgbm": 37.1, "ets": 34.0, "s_naive": 33, "naive": 31, "moving_avg": 59.4 },
+      { "date": "2024-05-10", "actual": 84, "lightgbm": 80.2, "ets": 49.5, "s_naive": 48, "naive": 36, "moving_avg": 57.0 },
+      { "date": "2024-05-11", "actual": 105, "lightgbm": 101.4, "ets": 64.0, "s_naive": 66, "naive": 84, "moving_avg": 64.8 },
+      { "date": "2024-05-12", "actual": 112, "lightgbm": 107.8, "ets": 68.5, "s_naive": 70, "naive": 105, "moving_avg": 73.1 },
+      { "date": "2024-05-13", "actual": 38, "lightgbm": 39.5, "ets": 35.0, "s_naive": 36, "naive": 112, "moving_avg": 73.4 },
+      { "date": "2024-05-14", "actual": 32, "lightgbm": 33.2, "ets": 31.0, "s_naive": 30, "naive": 38, "moving_avg": 68.6 },
+      { "date": "2024-05-15", "actual": 35, "lightgbm": 36.1, "ets": 33.5, "s_naive": 34, "naive": 32, "moving_avg": 63.7 }
+    ]
+  }
+}

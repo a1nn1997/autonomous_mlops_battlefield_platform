@@ -1,0 +1,60 @@
+{
+  "activeChampion": {
+    "version": "v1",
+    "name": "LightGBM Regressor (L1 Loss)",
+    "description": "Production champion trained on multi-store demand with 28 lag and rolling features",
+    "status": "CHAMPION",
+    "wape": 0.1325,
+    "bias": -0.0120,
+    "mae": 6.47,
+    "rmse": 8.93,
+    "p50LatencyMs": 7.05,
+    "p95LatencyMs": 14.20,
+    "throughputRps": 257.6,
+    "circuitBreakerSlaSeconds": 2.0
+  },
+  "baseline": {
+    "name": "Seasonal Naive (7-day lag)",
+    "wape": 0.4203,
+    "bias": 0.0380,
+    "mae": 19.85,
+    "rmse": 26.40
+  },
+  "hierarchy": {
+    "stores": ["CA_1", "CA_2", "TX_1", "WI_1"],
+    "categories": ["FOODS_1 (Dairy)", "FOODS_2 (Bakery)", "HOBBIES_1", "HOUSEHOLD_1"],
+    "totalSkus": 10,
+    "timeHorizonDays": 15
+  },
+  "driftIncident": {
+    "status": "CRITICAL_DRIFT",
+    "maxPsi": 0.396,
+    "driftDetected": true,
+    "alertThreshold": 0.20,
+    "maxFeature": "rolling_mean_28",
+    "features": [
+      { "feature": "rolling_mean_28", "psi": 0.396, "status": "CRITICAL_DRIFT", "baseMean": 46.85, "currMean": 35.89 },
+      { "feature": "sell_price", "psi": 0.245, "status": "CRITICAL_DRIFT", "baseMean": 6.52, "currMean": 8.26 },
+      { "feature": "rolling_mean_7", "psi": 0.182, "status": "WARNING", "baseMean": 46.86, "currMean": 37.10 },
+      { "feature": "lag_1", "psi": 0.089, "status": "STABLE", "baseMean": 46.86, "currMean": 44.20 },
+      { "feature": "lag_7", "psi": 0.076, "status": "STABLE", "baseMean": 46.88, "currMean": 45.10 }
+    ],
+    "decayReport": {
+      "currentWape": 0.3400,
+      "baselineWape": 0.1325,
+      "relativeDecay": 0.380,
+      "normalizedBias": 0.2200,
+      "alert": true
+    }
+  },
+  "shadowCandidate": {
+    "version": "v_shadow_post_drift",
+    "name": "LightGBM Shadow (Price-Shifted Slice)",
+    "wape": 0.1410,
+    "bias": 0.0040,
+    "mae": 6.88,
+    "improvementVsStale": 0.585,
+    "wilcoxonPValue": 0.0074,
+    "gateStatus": "PASSED"
+  }
+}

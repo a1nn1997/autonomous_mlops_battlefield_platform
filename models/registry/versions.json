@@ -1,0 +1,74 @@
+{
+  "active_version": "v1",
+  "previous_version": "v_shadow_20261012_131516",
+  "history": [
+    {
+      "action": "promote",
+      "version": "v1",
+      "from_version": null,
+      "timestamp": "2026-10-12T13:14:43.241035+00:00"
+    },
+    {
+      "action": "promote",
+      "version": "v1",
+      "from_version": "v1",
+      "timestamp": "2026-10-12T13:15:15.576115+00:00"
+    },
+    {
+      "action": "promote",
+      "version": "v_shadow_20261012_131516",
+      "from_version": "v1",
+      "timestamp": "2026-10-12T13:15:16.578133+00:00"
+    },
+    {
+      "action": "rollback",
+      "from_version": "v_shadow_20261012_131516",
+      "to_version": "v1",
+      "timestamp": "2026-10-12T13:15:16.583879+00:00"
+    },
+    {
+      "action": "rollback",
+      "from_version": "v1",
+      "to_version": "v_shadow_20261012_131516",
+      "timestamp": "2026-10-12T13:31:40.984585+00:00"
+    },
+    {
+      "action": "rollback",
+      "from_version": "v_shadow_20261012_131516",
+      "to_version": "v1",
+      "timestamp": "2026-10-12T13:32:03.212856+00:00"
+    }
+  ],
+  "versions": {
+    "v1": {
+      "version": "v1",
+      "created_at": "2026-10-12T13:15:15.576115+00:00",
+      "description": "Initial champion model",
+      "metrics": {
+        "wape": 0.1325,
+        "bias": -0.012,
+        "mae": 6.47,
+        "rmse": 8.93,
+        "total_actual": 89882.0,
+        "total_pred": 88802.85818744486
+      },
+      "status": "champion",
+      "feature_count": 27
+    },
+    "v_shadow_20261012_131516": {
+      "version": "v_shadow_20261012_131516",
+      "created_at": "2026-10-12T13:15:16.578133+00:00",
+      "description": "Auto-retrained candidate on drift alert (Feature/Prediction drift detected (Max PSI: 0.396))",
+      "metrics": {
+        "wape": 0.1337,
+        "bias": 0.0056,
+        "mae": 5.34,
+        "rmse": 7.11,
+        "total_actual": 22356.0,
+        "total_pred": 22482.26851839439
+      },
+      "status": "rolled_back",
+      "feature_count": 27
+    }
+  }
+}

@@ -1,0 +1,35 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: forecast-emergency-rollback
+  namespace: forecast-mlops
+  labels:
+    app.kubernetes.io/name: forecast-serving
+    app.kubernetes.io/component: emergency-rollback
+spec:
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 2
+  template:
+    metadata:
+      labels:
+        app: forecast-emergency-rollback
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: rollback-trigger
+          image: curlimages/curl:8.5.0
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Initiating emergency atomic model rollback on serving cluster..."
+              STATUS_CODE=$(curl -s -o /tmp/response.json -w "%{http_code}" -X POST http://forecast-serving.forecast-mlops.svc.cluster.local:8000/models/rollback)
+              echo "Rollback HTTP Response Code: $STATUS_CODE"
+              cat /tmp/response.json
+              if [ "$STATUS_CODE" -eq 200 ]; then
+                echo "SUCCESS: Atomic model rollback executed successfully."
+                exit 0
+              else
+                echo "ERROR: Rollback failed with status code $STATUS_CODE"
+                exit 1
+              fi

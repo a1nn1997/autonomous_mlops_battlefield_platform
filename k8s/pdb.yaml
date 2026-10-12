@@ -1,0 +1,13 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: forecast-serving-pdb
+  namespace: forecast-mlops
+  labels:
+    app.kubernetes.io/name: forecast-serving
+    app.kubernetes.io/component: high-availability
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: forecast-serving

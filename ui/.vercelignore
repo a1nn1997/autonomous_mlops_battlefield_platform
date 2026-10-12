@@ -1,0 +1,9 @@
+# UI Vercel Ignore File
+.venv/
+venv/
+env/
+.env
+.env.local
+node_modules/
+.next/
+*.log

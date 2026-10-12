@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: forecast-mlops
+  labels:
+    app.kubernetes.io/name: forecast-explainer
+    app.kubernetes.io/part-of: forecast-to-insight
+    environment: production
