@@ -39,6 +39,7 @@ jobs:
         run: npm run build
 
       - name: Deploy to Vercel Action
+        if: ${{ secrets.VERCEL_TOKEN != '' }}
         uses: amondnet/vercel-action@v25
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
@@ -48,3 +49,9 @@ jobs:
           working-directory: ./ui
         env:
           DETERMINISTIC_PROD_MODE: "true"
+
+      - name: Skip Vercel Notice
+        if: ${{ secrets.VERCEL_TOKEN == '' }}
+        run: |
+          echo "VERCEL_TOKEN secret is not set in this repository. Skipping automatic Vercel deployment."
+          echo "To enable automatic deployment, add VERCEL_TOKEN, VERCEL_ORG_ID, and VERCEL_PROJECT_ID in GitHub repo Settings > Secrets."

@@ -16,6 +16,15 @@ def temp_registry(tmp_path):
 @pytest.fixture
 def client():
     load_active_model()
+    import src.serving.app as serving_module
+    if serving_module.active_model is None:
+        raw_df = generate_retail_data(n_items=2, n_stores=1, start_date="2024-01-01", end_date="2024-03-31")
+        pipeline = FeaturePipeline()
+        feat_df = pipeline.fit_transform(raw_df)
+        m = LightGBMForecaster(params={"n_estimators": 10, "verbose": -1})
+        m.fit(feat_df)
+        serving_module.registry.register("v1", m, {"wape": 0.1325}, description="Fixture v1", promote=True)
+        load_active_model()
     return TestClient(app)
 
 def test_model_registry_and_rollback(temp_registry):

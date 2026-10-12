@@ -73,8 +73,9 @@ ui/.vercel/
 *.webp
 *.png
 *.mp4
-models/registry/champion/
-models/registry/v*/
+models/registry/v_shadow_*/
+!models/registry/champion/
+!models/registry/v1/
 !models/registry/versions.json
 !models/registry/.gitkeep
 

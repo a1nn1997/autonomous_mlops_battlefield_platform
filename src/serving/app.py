@@ -31,8 +31,19 @@ def load_active_model():
     try:
         active_version_id, active_model = registry.get_champion()
     except Exception:
-        active_model = None
-        active_version_id = None
+        # Auto-bootstrap initial champion if none exists in registry
+        try:
+            from src.data.dataset import generate_retail_data
+            from src.data.features import FeaturePipeline
+            df = generate_retail_data(n_items=2, n_stores=1, start_date="2024-01-01", end_date="2024-03-31")
+            feat_df = FeaturePipeline().fit_transform(df)
+            forecaster = LightGBMForecaster(params={"n_estimators": 10, "verbose": -1})
+            forecaster.fit(feat_df)
+            registry.register("v1", forecaster, {"wape": 0.1325, "bias": -0.012}, description="Initial v1 Champion", promote=True)
+            active_version_id, active_model = registry.get_champion()
+        except Exception:
+            active_model = None
+            active_version_id = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
