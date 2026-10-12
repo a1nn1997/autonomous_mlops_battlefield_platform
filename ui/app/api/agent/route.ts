@@ -36,6 +36,8 @@ export async function POST(req: Request) {
       body = await req.clone().json();
     } catch {
       // ignore
+    }
+
     // Load measured telemetry artifact
     let telem: any = null;
     try {
