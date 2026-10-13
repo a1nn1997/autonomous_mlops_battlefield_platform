@@ -700,9 +700,14 @@ export const DeepAnalyseModal: React.FC<DeepAnalyseModalProps> = ({
                               {(workflowResults.champion.wape * 100).toFixed(2)}%
                             </td>
                             <td style={{ padding: "10px" }}>{(workflowResults.champion.bias * 100).toFixed(2)}%</td>
-                            <td style={{ padding: "10px" }}>{workflowResults.champion.latencyMs} ms</td>
+                            <td style={{ padding: "10px" }}>
+                              {workflowResults.champion.latencyMs} ms
+                              {(!workflowResults.measured || workflowResults.champion?.estimate) && (
+                                <span style={{ fontSize: "9px", padding: "1px 5px", borderRadius: "4px", background: "rgba(255, 255, 255, 0.1)", color: "var(--text-muted)", marginLeft: "4px" }}>estimate</span>
+                              )}
+                            </td>
                             <td style={{ padding: "10px" }}>{workflowResults.champion.rps} RPS</td>
-                            <td style={{ padding: "10px", color: "var(--accent-emerald)", fontWeight: "600" }}>PROMOTED</td>
+                            <td style={{ padding: "10px", color: "var(--accent-emerald)", fontWeight: "600" }}>{workflowResults.champion.status || "PROMOTED"}</td>
                           </tr>
 
                           <tr style={{ borderBottom: "1px solid var(--border-subtle)" }}>
@@ -712,9 +717,14 @@ export const DeepAnalyseModal: React.FC<DeepAnalyseModalProps> = ({
                               {(workflowResults.challenger.wape * 100).toFixed(2)}%
                             </td>
                             <td style={{ padding: "10px" }}>{(workflowResults.challenger.bias * 100).toFixed(2)}%</td>
-                            <td style={{ padding: "10px" }}>{workflowResults.challenger.latencyMs} ms</td>
+                            <td style={{ padding: "10px" }}>
+                              {workflowResults.challenger.latencyMs} ms
+                              {(!workflowResults.measured || workflowResults.challenger?.estimate) && (
+                                <span style={{ fontSize: "9px", padding: "1px 5px", borderRadius: "4px", background: "rgba(255, 255, 255, 0.1)", color: "var(--text-muted)", marginLeft: "4px" }}>estimate</span>
+                              )}
+                            </td>
                             <td style={{ padding: "10px" }}>{workflowResults.challenger.rps} RPS</td>
-                            <td style={{ padding: "10px", color: "var(--text-muted)" }}>SHADOW MONITOR</td>
+                            <td style={{ padding: "10px", color: workflowResults.challenger.status?.includes("PROMOTED") ? "var(--accent-emerald)" : "var(--text-muted)", fontWeight: "600" }}>{workflowResults.challenger.status || "SHADOW MONITOR"}</td>
                           </tr>
 
                           <tr style={{ color: "var(--text-muted)" }}>

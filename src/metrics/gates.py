@@ -2,6 +2,10 @@
 Quantitative Champion-vs-Challenger Model Promotion Evaluation Gates.
 Implements WAPE improvement, Wilcoxon Signed-Rank non-parametric statistical hypothesis test,
 and normalized forecast bias bounds.
+
+Model Roles Convention:
+- 'candidate' / 'challenger' (chal_preds): The candidate model seeking promotion to replace the champion.
+- 'champion' (champ_preds): The incumbent production model currently serving online traffic.
 """
 
 from typing import Dict, Any, Union
@@ -19,14 +23,22 @@ def evaluate_promotion_gate(
     """
     Evaluates whether a candidate/challenger model qualifies for promotion over the champion.
 
+    Parameters:
+        y_true: Ground-truth actual demand values.
+        champ_preds: Forecasts from the incumbent CHAMPION model (the production baseline).
+        chal_preds: Forecasts from the CANDIDATE / CHALLENGER model seeking promotion.
+        wape_improvement_threshold: Minimum fractional WAPE reduction required (e.g., 0.0 for strict superiority).
+        wilcoxon_alpha: Significance level for the paired Wilcoxon signed-rank test (default 0.05).
+        max_absolute_bias: Maximum permitted magnitude of volume bias (default 0.05 / 5%).
+
     Criteria for PROMOTION:
-    1. WAPE Improvement: Candidate WAPE strictly lower than Champion WAPE (or beats improvement threshold).
+    1. WAPE Improvement: Candidate WAPE strictly lower than Champion WAPE (chal_wape < champ_wape).
     2. Wilcoxon Signed-Rank Test: Candidate absolute error significantly lower than Champion (p < wilcoxon_alpha).
-    3. Normalized Bias Bound: Candidate abs(bias) <= max_absolute_bias.
+    3. Normalized Bias Bound: Candidate abs(chal_bias) <= max_absolute_bias.
 
     Returns:
         Dict with decision ('PROMOTED', 'REJECTED_WORSE_WAPE', 'REJECTED_NOT_SIGNIFICANT', 'REJECTED_BIAS_VIOLATION'),
-        p-value, candidate WAPE, champion WAPE, candidate bias, champion bias, and reasons.
+        is_promoted (bool), wilcoxon_p_value, candidate WAPE, champion WAPE, candidate bias, champion bias, and reasons.
     """
     y_true_arr = np.asarray(y_true, dtype=float)
     champ_arr = np.asarray(champ_preds, dtype=float)

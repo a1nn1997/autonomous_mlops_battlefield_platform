@@ -66,9 +66,8 @@ def test_baselines_and_lightgbm():
 async def test_battle_service_direct():
     from src.battle_service import parse_csv_to_series, run_model_battle
     short_csv = "date,sales\n2023-01-01,100\n2023-01-02,120\n"
-    points = parse_csv_to_series(short_csv)
-    assert len(points) == 2
-    assert points[0]["actual"] == 100.0
+    with pytest.raises(ValueError, match="at least 60 rows"):
+        parse_csv_to_series(short_csv)
 
     # Test that < 60 rows raises ValueError with expected message
     short_payload = {
@@ -86,6 +85,11 @@ async def test_battle_service_direct():
     for d, s in zip(dates, sales):
         csv_rows.append(f"{d.strftime('%Y-%m-%d')},{s},STORE_01,ITEM_001")
     valid_csv = "\n".join(csv_rows)
+    parsed_points = parse_csv_to_series(valid_csv)
+    assert len(parsed_points) == 70
+    assert "actual" in parsed_points[0]
+    assert "lightgbm" not in parsed_points[0]
+    assert "ets" not in parsed_points[0]
 
     payload = {
         "activeDatasetId": "custom_real",

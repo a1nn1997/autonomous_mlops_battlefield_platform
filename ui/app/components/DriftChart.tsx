@@ -41,8 +41,8 @@ export const DriftChart: React.FC<DriftChartProps> = ({ report, onRetrainRequest
       { feature: "lag_7", psi: 0.039, status: "STABLE", baseMean: 46.88, currMean: 46.85 },
     ],
     decayReport: {
-      currentWape: 0.1325,
-      baselineWape: 0.1325,
+      currentWape: 0.13,
+      baselineWape: 0.13,
       relativeDecay: 0.0,
       normalizedBias: -0.012,
       alert: false,
@@ -111,9 +111,9 @@ export const DriftChart: React.FC<DriftChartProps> = ({ report, onRetrainRequest
           <div style={{ fontSize: "11px", color: "var(--text-muted)", textTransform: "uppercase" }}>Rolling 14d WAPE</div>
           <div style={{ display: "flex", alignItems: "baseline", gap: "8px", marginTop: "4px" }}>
             <span style={{ fontSize: "24px", fontWeight: "800", color: isCritical ? "var(--accent-amber)" : "var(--text-primary)" }}>
-              {((activeReport.decayReport?.currentWape || 0.1325) * 100).toFixed(1)}%
+              {((activeReport.decayReport?.currentWape || 0.13) * 100).toFixed(1)}%
             </span>
-            <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>Base: 13.25%</span>
+            <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>Base: 13.00%</span>
           </div>
           <div style={{ fontSize: "11px", color: isCritical ? "var(--accent-rose)" : "var(--accent-emerald)", marginTop: "4px" }}>
             {isCritical ? `+${((activeReport.decayReport?.relativeDecay || 0.38) * 100).toFixed(1)}% Degradation` : "Performance Nominal"}

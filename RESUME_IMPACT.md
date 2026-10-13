@@ -52,7 +52,7 @@
 ### Question 1: "Why did you choose WAPE over MAPE or RMSE for your primary metric?"
 > *"In multi-series retail demand forecasting, demand is frequently intermittent with zero-sales periods. Standard MAPE divides by actual demand: $\frac{|y - \hat{y}|}{y}$. When demand is zero, MAPE is mathematically undefined ($\infty$), and for small demand values (e.g., $1$ unit), small absolute errors produce massive percentage spikes that skew averages.*  
 > *RMSE penalizes squared errors, which biases the model toward massive promotional spikes at the expense of baseline accuracy.*  
-> *WAPE (Weighted Absolute Percentage Error), $\frac{\sum |y - \hat{y}|}{\sum y}$, normalizes total absolute errors by total demand volume. It is scale-invariant, robust to zero counts, and directly aligns with inventory safety-stock economics. In our LightGBM model, pairing WAPE evaluation with an **L1 MAE loss objective** forces the model to estimate the conditional median, delivering our 13.25% test WAPE."*
+> *WAPE (Weighted Absolute Percentage Error), $\frac{\sum |y - \hat{y}|}{\sum y}$, normalizes total absolute errors by total demand volume. It is scale-invariant, robust to zero counts, and directly aligns with inventory safety-stock economics. In our LightGBM model, pairing WAPE evaluation with an **L1 MAE loss objective** forces the model to estimate the conditional median, delivering our 13.00% test WAPE."*
 
 ### Question 2: "How does your system detect data drift, and how do you prevent retraining on transient noise?"
 > *"We monitor feature and prediction distributions in real time using the **Population Stability Index (PSI)** computed across 10 empirical reference deciles. A PSI $\ge 0.20$ signals critical covariate shift (e.g. during a 60% price shock).*  

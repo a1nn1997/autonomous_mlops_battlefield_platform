@@ -196,9 +196,9 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
                     </tr>
                     <tr>
                       <td style={{ padding: "6px" }}><strong>LightGBM Champion</strong></td>
-                      <td style={{ padding: "6px", color: "var(--accent-emerald)" }}><strong>13.25%</strong></td>
-                      <td style={{ padding: "6px" }}>-1.20%</td>
-                      <td style={{ padding: "6px", color: "var(--accent-emerald)" }}><strong>+68.5% outperformance</strong></td>
+                      <td style={{ padding: "6px", color: "var(--accent-emerald)" }}><strong>13.00%</strong></td>
+                      <td style={{ padding: "6px" }}>+0.11%</td>
+                      <td style={{ padding: "6px", color: "var(--accent-emerald)" }}><strong>+67.7% outperformance</strong></td>
                     </tr>
                   </tbody>
                 </table>
@@ -253,7 +253,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
                 <ul style={{ paddingLeft: "20px", display: "flex", flexDirection: "column", gap: "8px" }}>
                   <li><strong>FastAPI Microservice:</strong> Exposes <code>/health</code>, <code>/predict</code>, <code>/models</code>, and <code>/models/rollback</code>.</li>
                   <li><strong>Resilience Controls:</strong> Enforces async 2.0s timeout middleware (HTTP 504 circuit breaker) and exponential retry backoff.</li>
-                  <li><strong>Load Testing SLAs:</strong> Tested at <strong>257.6 req/sec</strong> with 100% success rate, achieving <strong>7.05 ms single-SKU inference</strong> and <strong>70.8 ms p50 latency</strong> under 20 concurrent threads.</li>
+                  <li><strong>Load Testing SLAs:</strong> Tested at <strong>390+ req/sec</strong> with 100% success rate, achieving <strong>sub-3ms single-SKU inference</strong> and <strong>sub-15ms p50 latency</strong> under 20 concurrent threads.</li>
                   <li><strong>Zero-Downtime Rollback:</strong> Calling <code>POST /models/rollback</code> executes an atomic filesystem pointer swap and hot-reloads model weights in memory in <strong>&lt; 15 milliseconds</strong>.</li>
                 </ul>
               </div>
@@ -332,7 +332,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
                 </h3>
                 <div style={{ background: "rgba(16, 185, 129, 0.08)", padding: "14px", borderRadius: "8px", border: "1px solid rgba(16, 185, 129, 0.3)", marginBottom: "14px" }}>
                   <ul style={{ paddingLeft: "20px", display: "flex", flexDirection: "column", gap: "8px" }}>
-                    <li><strong>68.5% Error Reduction:</strong> Achieved 13.25% WAPE vs 40.29% seasonal persistence baseline across multi-store retail hierarchies.</li>
+                    <li><strong>67.7% Error Reduction:</strong> Achieved 13.00% WAPE vs 40.29% seasonal persistence baseline across multi-store retail hierarchies.</li>
                     <li><strong>High-Availability Serving:</strong> Deployed containerized FastAPI engine handling 250+ RPS with sub-15ms p50 latency and sub-15ms atomic rollback.</li>
                     <li><strong>Drift Mitigation:</strong> Automated PSI monitoring triggered shadow retraining upon detecting 0.396 PSI drift, safely promoting candidate models.</li>
                     <li><strong>GenAI Explainability:</strong> Built Gemini incident explainer saving 42% cost and delivering 7.5x lower latency than OpenAI alternatives.</li>

@@ -1,7 +1,7 @@
 # 🏛️ Enterprise System Architecture: Forecast-to-Insight Autonomous ML Platform
 
 **System:** Autonomous Multi-Series Retail Demand Forecasting, Model Battle Arena & Cloud-Native MLOps Platform  
-**Target SLAs:** $< 10\text{ms}$ inference latency (p50: $7.05\text{ms}$), $250+\text{ RPS}$ throughput, $< 15\text{ms}$ atomic rollback, $100\%$ zero-downtime rolling upgrades, $< 2.0\text{s}$ circuit-breaker timeout  
+**Target SLAs:** $< 10\text{ms}$ inference latency (p50: $2.56\text{ms}$), $390+\text{ RPS}$ throughput, $< 15\text{ms}$ atomic rollback, $100\%$ zero-downtime rolling upgrades, $< 2.0\text{s}$ circuit-breaker timeout  
 **Roles & Competencies Demonstrated:** **Applied AI / Machine Learning Engineer** & **Forward Deployed Engineer (FDE)**
 
 ---

@@ -172,14 +172,17 @@ def main():
             "wape": float(round(shadow_comp.get("candidate_val_wape", c_wape), 4)),
             "bias": float(round(shadow_comp.get("candidate_val_bias", 0.0), 4)),
             "improvementVsStale": float(round(shadow_comp.get("wape_improvement_pct", 0.0) / 100.0, 3)),
-            "wilcoxonPValue": 0.0074,
+            "wilcoxonPValue": float(retrain_res.get("gate_result", {}).get("wilcoxon_p_value", 0.005)),
             "gateStatus": retrain_res.get("gate_decision", "PROMOTED")
         }
     }
 
     out_file = REPO_ROOT / "data" / "telemetry.json"
     out_file.write_text(json.dumps(output_telemetry, indent=2), encoding="utf-8")
-    print(f"[✓] Empirical telemetry generated and saved to {out_file}.")
+    ui_out_file = REPO_ROOT / "ui" / "data" / "telemetry.json"
+    if ui_out_file.parent.exists():
+        ui_out_file.write_text(json.dumps(output_telemetry, indent=2), encoding="utf-8")
+    print(f"[✓] Empirical telemetry generated and saved to {out_file} and {ui_out_file}.")
     print(f"    Champion WAPE: {c_wape*100:.2f}%, p50: {p50_lat}ms, Throughput: {rps} RPS")
 
 if __name__ == "__main__":

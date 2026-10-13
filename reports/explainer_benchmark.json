@@ -7,7 +7,7 @@
       "diagnostic_accuracy": "100.0%",
       "citation_adherence": "33.3%",
       "latency_p50_ms": 0.0,
-      "latency_p95_ms": 159.5,
+      "latency_p95_ms": 108.8,
       "cost_per_1k_reports_usd": "$0.000"
     },
     {
@@ -29,7 +29,7 @@
       "diagnostic_accuracy": "100.0%",
       "citation_adherence": "33.3%",
       "latency_p50_ms": 0.0,
-      "latency_p95_ms": 159.5,
+      "latency_p95_ms": 108.8,
       "cost_per_1k_reports_usd": "$0.000"
     },
     "openai": {

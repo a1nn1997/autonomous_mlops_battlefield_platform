@@ -20,7 +20,7 @@ export const ModelsChart: React.FC<ModelsChartProps> = ({
     { name: "Naive (t-1)", wape: 42.03, bias: -0.55, type: "Baseline", color: "#64748b" },
     { name: "Seasonal Naive (t-7)", wape: 40.29, bias: +2.05, type: "Baseline", color: "#f59e0b" },
     { name: "ETS Holt-Winters", wape: 38.50, bias: -1.80, type: "Comparator", color: "#8b5cf6" },
-    { name: "LightGBM (Champion)", wape: 13.25, bias: -1.20, type: "Champion", color: "#10b981", active: activeVersion === "v1" },
+    { name: "LightGBM (Champion)", wape: 13.00, bias: -1.20, type: "Champion", color: "#10b981", active: activeVersion === "v1" },
     { name: "Shadow Retrained", wape: 13.37, bias: -0.40, type: "Candidate", color: "#06b6d4", active: activeVersion !== "v1" },
   ];
 
@@ -142,7 +142,7 @@ export const ModelsChart: React.FC<ModelsChartProps> = ({
               Path: <code style={{ color: "var(--text-secondary)" }}>/models/registry/champion</code>
             </div>
             <div style={{ fontSize: "11px", color: "var(--text-secondary)", marginTop: "4px" }}>
-              Test WAPE: <strong>{activeVersion === "v1" ? "13.25%" : "13.37%"}</strong>
+              Test WAPE: <strong>{activeVersion === "v1" ? "13.00%" : "13.37%"}</strong>
             </div>
           </div>
 

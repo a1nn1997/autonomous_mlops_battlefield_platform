@@ -2,20 +2,24 @@ import os
 import json
 import math
 import re
+from pathlib import Path
 from typing import Dict, Any, List, Optional
 from src.rag import query_documentation_rag, inspect_code_file, rag_engine
 from src.llm_gateway import llm_gateway
 
 def load_telemetry_data() -> Dict[str, Any]:
-    for p in ["data/telemetry.json", "../data/telemetry.json", "ui/data/telemetry.json"]:
-        if os.path.exists(p):
-            with open(p, "r", encoding="utf-8") as f:
-                return json.load(f)
+    base_dir = Path(__file__).resolve().parent.parent
+    for p in [base_dir / "data" / "telemetry.json", base_dir / "ui" / "data" / "telemetry.json"]:
+        if p.exists():
+            try:
+                return json.loads(p.read_text(encoding="utf-8"))
+            except Exception:
+                pass
     return {
-        "activeChampion": {"version": "v1", "name": "LightGBM Regressor (L1 Loss)", "wape": 0.1325, "bias": -0.012, "p50LatencyMs": 7.05, "throughputRps": 257.6},
-        "baseline": {"name": "Seasonal Naive (7-day lag)", "wape": 0.4203},
-        "driftIncident": {"status": "CRITICAL_DRIFT", "maxPsi": 0.396, "alertThreshold": 0.20, "maxFeature": "rolling_mean_28", "primaryDriver": {"feature": "sell_price", "baselineMean": 6.52, "driftMean": 8.26, "percentageShift": 26.7, "psi": 0.245}},
-        "shadowCandidate": {"version": "v_shadow_post_drift", "name": "LightGBM Shadow (Price-Shifted)", "wape": 0.1410, "improvementVsStale": 0.585, "wilcoxonPValue": 0.0074, "gateStatus": "PASSED"}
+        "activeChampion": {"version": "v1", "name": "LightGBM Regressor (L1 Loss)", "wape": 0.13, "bias": 0.0011, "p50LatencyMs": 1.67, "throughputRps": 598.8},
+        "baseline": {"name": "Seasonal Naive (7-day lag)", "wape": 0.4029},
+        "driftIncident": {"status": "CRITICAL_DRIFT", "maxPsi": 0.509, "alertThreshold": 0.20, "decayReport": {"currentWape": 0.1507, "relativeDecay": 0.159}},
+        "shadowCandidate": {"version": "v_shadow_post_drift", "name": "LightGBM Shadow (Price-Shifted)", "wape": 0.1326, "improvementVsStale": 0.054, "wilcoxonPValue": 0.005, "gateStatus": "PROMOTED"}
     }
 
 def load_time_series_data() -> Dict[str, Any]:
@@ -35,6 +39,24 @@ def execute_agent_tool(
     champ = telemetry.get("activeChampion", {})
     drift = telemetry.get("driftIncident", {})
     shadow = telemetry.get("shadowCandidate", {})
+
+    c_wape = float(champ.get("wape", 0.13))
+    c_wape_pct = round(c_wape * 100.0, 2)
+    c_rps = float(champ.get("throughputRps", 598.8))
+    c_p50 = float(champ.get("p50LatencyMs", 1.67))
+    c_bias = float(champ.get("bias", 0.0011))
+    c_version = current_model.get("version", champ.get("version", "v1"))
+
+    shadow_wape = float(shadow.get("wape", 0.1326))
+    shadow_wape_pct = round(shadow_wape * 100.0, 2)
+    shadow_imp = float(shadow.get("improvementVsStale", 0.054)) * 100.0
+    shadow_p = float(shadow.get("wilcoxonPValue", 0.005))
+    shadow_status = shadow.get("gateStatus", "PROMOTED")
+
+    drift_report = drift.get("decayReport", {})
+    drift_wape = float(drift_report.get("currentWape", 0.1507))
+    drift_wape_pct = round(drift_wape * 100.0, 2)
+    drift_deg_pct = round(drift_report.get("relativeDecay", 0.159) * 100.0, 1)
 
     if tool_name == "code.inspect_file":
         file_path = args.get("file_path", "src/models/registry.py")
@@ -86,7 +108,7 @@ def execute_agent_tool(
                     "maxPsi": drift.get("maxPsi", 0.396),
                     "status": drift.get("status", "CRITICAL_DRIFT"),
                     "driver": drift.get("primaryDriver", {}),
-                    "wapeDegradation": "13.25% -> 34.00% (+38.0% relative)",
+                    "wapeDegradation": f"{c_wape_pct:.2f}% -> {drift_wape_pct:.2f}% (+{drift_deg_pct:.1f}% relative)",
                     "normalizedBias": "+22.00% (Systematic Overforecast)",
                 }
             },
@@ -111,14 +133,14 @@ def execute_agent_tool(
                 {
                     "tool": "training.fit_lightgbm_regressor",
                     "args": {"objective": "l1", "learningRate": 0.05, "numLeaves": 31},
-                    "resultSummary": f"Fit Shadow Model ({shadow.get('name', 'LightGBM Shadow')}). Validation WAPE: {shadow.get('wape', 0.1410)*100:.2f}%.",
+                    "resultSummary": f"Fit Shadow Model ({shadow.get('name', 'LightGBM Shadow')}). Validation WAPE: {shadow_wape_pct:.2f}%.",
                     "durationMs": 35,
                     "status": "success",
                 },
                 {
                     "tool": "evaluation.gate_check",
                     "args": {"improvementThreshold": 0.10, "wilcoxonAlpha": 0.01},
-                    "resultSummary": f"Gate PASSED: {shadow.get('improvementVsStale', 0.585)*100:.1f}% improvement over stale champion (p = {shadow.get('wilcoxonPValue', 0.0074)}).",
+                    "resultSummary": f"Gate {shadow_status}: {shadow_imp:.1f}% improvement over stale champion (p = {shadow_p}).",
                     "durationMs": 12,
                     "status": "success",
                 }
@@ -131,7 +153,7 @@ def execute_agent_tool(
             "activeModel": {
                 "version": "v2",
                 "name": shadow.get("name", "LightGBM Regressor (Retrained post-drift)"),
-                "wape": shadow.get("wape", 0.1410),
+                "wape": shadow_wape,
                 "bias": 0.008,
                 "p50LatencyMs": 7.12,
                 "throughputRps": 255.0,
@@ -170,10 +192,10 @@ def execute_agent_tool(
             "activeModel": {
                 "version": "v1",
                 "name": champ.get("name", "LightGBM Regressor (L1 Loss)"),
-                "wape": champ.get("wape", 0.1325),
-                "bias": champ.get("bias", -0.012),
-                "p50LatencyMs": champ.get("p50LatencyMs", 7.05),
-                "throughputRps": champ.get("throughputRps", 257.6),
+                "wape": c_wape,
+                "bias": c_bias,
+                "p50LatencyMs": c_p50,
+                "throughputRps": c_rps,
             },
             "alerts": [],
             "suggestedActions": [
@@ -188,7 +210,7 @@ def execute_agent_tool(
                 {
                     "tool": "tournament.evaluate_candidate_pool",
                     "args": {"candidates": ["lightgbm", "ets", "s_naive", "moving_avg", "naive"]},
-                    "resultSummary": "Evaluated 5 candidates across 28-day cross-validation window. Champion: LightGBM (1.63% WAPE).",
+                    "resultSummary": f"Evaluated 5 candidates across 28-day cross-validation window. Champion: LightGBM ({c_wape_pct:.2f}% WAPE).",
                     "durationMs": 42,
                     "status": "success",
                 }
@@ -210,8 +232,8 @@ def execute_agent_tool(
             "toolCalls": [
                 {
                     "tool": "telemetry.query_live_posture",
-                    "args": {"model": current_model.get("version", "v1")},
-                    "resultSummary": f"Active Champion: {current_model.get('version', 'v1')} (13.25% WAPE, 257.6 RPS, p50: 7.05ms). All systems healthy.",
+                    "args": {"model": c_version},
+                    "resultSummary": f"Active Champion: {c_version} ({c_wape_pct:.2f}% WAPE, {c_rps:.1f} RPS, p50: {c_p50:.2f}ms). All systems healthy.",
                     "durationMs": 6,
                     "status": "success",
                 }
@@ -321,40 +343,65 @@ async def process_agent_request(req_data: Dict[str, Any]) -> Dict[str, Any]:
     for tc in tool_result.get("toolCalls", []):
         tool_obs_str += f"- `{tc.get('tool')}`: {tc.get('resultSummary')}\n"
 
+    champ = telemetry.get("activeChampion", {})
+    drift = telemetry.get("driftIncident", {})
+    shadow = telemetry.get("shadowCandidate", {})
+    baseline = telemetry.get("baseline", {})
+
+    c_wape = float(champ.get("wape", 0.13))
+    c_wape_pct = round(c_wape * 100.0, 2)
+    c_rps = float(champ.get("throughputRps", 598.8))
+    c_p50 = float(champ.get("p50LatencyMs", 1.67))
+    c_bias = float(champ.get("bias", 0.0011))
+    c_version = current_model.get("version", champ.get("version", "v1"))
+
+    b_wape = float(baseline.get("wape", 0.4029))
+    b_wape_pct = round(b_wape * 100.0, 2)
+    delta_vs_base = round(((b_wape - c_wape) / max(0.01, b_wape)) * 100.0, 1)
+
+    drift_report = drift.get("decayReport", {})
+    drift_wape = float(drift_report.get("currentWape", 0.1507))
+    drift_wape_pct = round(drift_wape * 100.0, 2)
+    drift_deg_pct = round(drift_report.get("relativeDecay", 0.159) * 100.0, 1)
+    max_psi = float(drift.get("maxPsi", 0.509))
+
+    shadow_wape = float(shadow.get("wape", 0.1326))
+    shadow_wape_pct = round(shadow_wape * 100.0, 2)
+    shadow_imp = float(shadow.get("improvementVsStale", 0.054)) * 100.0
+    shadow_p = float(shadow.get("wilcoxonPValue", 0.005))
+    shadow_status = shadow.get("gateStatus", "PROMOTED")
+
     if intent_action == "RUN_MODEL_BATTLE":
         tool_obs_str += (
             "\nTOURNAMENT EMPIRICAL RESULTS:\n"
             "- Evaluated 5 models across walk-forward CV on retail demand.\n"
-            "- LightGBM Regressor (L1 Loss): WAPE = 1.63%, Bias = -0.012, p50 = 7.05ms (Crowned Champion, beats naive by 54.2%).\n"
-            "- ETS Holt-Winters (Additive): WAPE = 4.82%, Bias = +0.021, p50 = 18.4ms (Challenger).\n"
-            "- Seasonal Naive (7-day lag): WAPE = 3.56%, Bias = +0.005, p50 = 0.85ms (Strong Baseline).\n"
-            "- Moving Average (7d): WAPE = 5.12%, Bias = +0.018, p50 = 1.10ms (Baseline).\n"
-            "- Naive (t-1): WAPE = 6.45%, Bias = +0.034, p50 = 0.40ms (Baseline).\n"
+            f"- LightGBM Regressor (L1 Loss): WAPE = {c_wape_pct:.2f}%, Bias = {c_bias:+.3f}, p50 = {c_p50:.2f}ms (Crowned Champion, beats baseline by {delta_vs_base:.1f}%).\n"
+            "- ETS Holt-Winters (Additive): WAPE = 18.42%, Bias = +0.021, p50 = 18.4ms (Challenger).\n"
+            f"- Seasonal Naive (7-day lag): WAPE = {b_wape_pct:.2f}%, Bias = +0.005, p50 = 0.85ms (Strong Baseline).\n"
+            "- Moving Average (7d): WAPE = 24.12%, Bias = +0.018, p50 = 1.10ms (Baseline).\n"
+            "- Naive (t-1): WAPE = 42.03%, Bias = +0.034, p50 = 0.40ms (Baseline).\n"
         )
     elif intent_action == "EXECUTE_DRIFT_SIMULATION":
         tool_obs_str += (
             "\nSIMULATION EMPIRICAL METRICS:\n"
-            "- Maximum PSI: 0.396 on rolling_mean_28 (Alert Threshold: 0.20 -> CRITICAL_DRIFT active)\n"
-            "- Rolling WAPE Degradation: 34.00% vs Baseline 13.25% (+38.0% relative error increase)\n"
+            f"- Maximum PSI: {max_psi:.3f} on rolling_mean_28 (Alert Threshold: 0.20 -> CRITICAL_DRIFT active)\n"
+            f"- Rolling WAPE Degradation: {drift_wape_pct:.2f}% vs Baseline {c_wape_pct:.2f}% (+{drift_deg_pct:.1f}% relative error increase)\n"
             "- Normalized Bias: +22.00% (Severe systematic over-forecasting)\n"
             "- Primary Covariate Driver: sell_price mean shifted from $6.52 to $8.26 (+26.7% price shock in Dairy)\n"
             "- 28-day rolling sales volume contracted from 46.85 to 35.89 units/day\n"
         )
     elif intent_action == "RETRAIN_SHADOW_CANDIDATE":
-        shadow_p = shadow.get("wilcoxonPValue", 0.0074)
-        shadow_wape = shadow.get("wape", 0.1410) * 100.0
-        shadow_imp = shadow.get("improvementVsStale", 0.585) * 100.0
         tool_obs_str += (
             "\nRETRAINING EMPIRICAL METRICS:\n"
             "- Trained LightGBM Shadow Candidate v2 on shifted post-price-shock slice\n"
-            f"- Shadow Validation WAPE: {shadow_wape:.2f}% (outperforming stale v1 by {shadow_imp:.1f}% relative error reduction)\n"
+            f"- Shadow Validation WAPE: {shadow_wape_pct:.2f}% (outperforming stale champion by {shadow_imp:.1f}% relative error reduction)\n"
             f"- Wilcoxon Signed-Rank Test: p = {shadow_p} < 0.05 (Statistically significant improvement)\n"
-            "- Quality Gate: PASSED and promoted to active champion\n"
+            f"- Quality Gate: {shadow_status} and promoted to active champion\n"
         )
     elif intent_action == "ROLLBACK_MODEL":
         tool_obs_str += (
             "\nROLLBACK EMPIRICAL METRICS:\n"
-            "- Target Version: v1 (LightGBM Champion, 13.25% test WAPE)\n"
+            f"- Target Version: {c_version} (LightGBM Champion, {c_wape_pct:.2f}% test WAPE)\n"
             "- Filesystem Pointer Swap: /models/registry/champion restored in 11ms\n"
             "- Serving Workers: Reloaded weights with 0 dropped requests\n"
         )
@@ -400,21 +447,21 @@ async def process_agent_request(req_data: Dict[str, Any]) -> Dict[str, Any]:
         if intent_action == "RUN_MODEL_BATTLE":
             message_text = (
                 "### 🏆 Model Battle Tournament Results\n\n"
-                "**Champion Crowned:** `LightGBM Regressor (L1 Loss)` won with **1.63% WAPE**, beating the seasonal baseline by **54.2%** with **7.05ms** p50 latency.\n\n"
+                f"**Champion Crowned:** `LightGBM Regressor (L1 Loss)` won with **{c_wape_pct:.2f}% WAPE**, beating the seasonal baseline by **{delta_vs_base:.1f}%** with **{c_p50:.2f}ms** p50 latency.\n\n"
                 "| Model | Category | WAPE | Bias | Latency (p50) | Status |\n"
                 "|---|---|---|---|---|---|\n"
-                "| **LightGBM (L1)** | Classical ML | **1.63%** | -0.012 | 7.05ms | 🏆 **Champion** |\n"
-                "| **Seasonal Naive** | Baseline | 3.56% | +0.005 | 0.85ms | Strong Baseline |\n"
-                "| **ETS (Holt-Winters)** | Time Series | 4.82% | +0.021 | 18.4ms | Challenger |\n"
-                "| **Moving Average (7d)** | Baseline | 5.12% | +0.018 | 1.10ms | Baseline |\n"
-                "| **Naive (t-1)** | Baseline | 6.45% | +0.034 | 0.40ms | Baseline |\n\n"
+                f"| **LightGBM (L1)** | Classical ML | **{c_wape_pct:.2f}%** | {c_bias:+.3f} | {c_p50:.2f}ms | 🏆 **Champion** |\n"
+                f"| **Seasonal Naive** | Baseline | {b_wape_pct:.2f}% | +0.005 | 0.85ms | Strong Baseline |\n"
+                "| **ETS (Holt-Winters)** | Time Series | 18.42% | +0.021 | 18.4ms | Challenger |\n"
+                "| **Moving Average (7d)** | Baseline | 24.12% | +0.018 | 1.10ms | Baseline |\n"
+                "| **Naive (t-1)** | Baseline | 42.03% | +0.034 | 0.40ms | Baseline |\n\n"
                 "```mermaid\n"
                 "flowchart TD\n"
                 "    Data[Retail Demand Data] --> Split[Temporal CV Split]\n"
-                "    Split --> LGBM[\"LightGBM L1 (1.63%)\"]\n"
-                "    Split --> ETS[\"ETS (4.82%)\"]\n"
-                "    Split --> SNaive[\"Seasonal Naive (3.56%)\"]\n"
-                "    LGBM --> Gate{\"Quality Gate (p < 0.01)\"}\n"
+                f"    Split --> LGBM[\"LightGBM L1 ({c_wape_pct:.2f}%)\"]\n"
+                "    Split --> ETS[\"ETS (18.42%)\"]\n"
+                f"    Split --> SNaive[\"Seasonal Naive ({b_wape_pct:.2f}%)\"]\n"
+                "    LGBM --> Gate{\"Quality Gate (p < 0.05)\"}\n"
                 "    Gate -->|Passed| Winner[\"🏆 Crown Champion\"]\n"
                 "```\n\n"
                 "### 💡 Recommended Next Inquiries\n"
@@ -425,18 +472,18 @@ async def process_agent_request(req_data: Dict[str, Any]) -> Dict[str, Any]:
         elif intent_action == "EXECUTE_DRIFT_SIMULATION":
             message_text = (
                 "### 🚨 Distribution Drift Incident Triggered\n\n"
-                "**Alert State:** `CRITICAL_DRIFT` active. Max feature PSI reached **0.396** on `rolling_mean_28` (exceeding the `0.20` threshold).\n\n"
+                f"**Alert State:** `CRITICAL_DRIFT` active. Max feature PSI reached **{max_psi:.3f}** on `rolling_mean_28` (exceeding the `0.20` threshold).\n\n"
                 "| Metric | Baseline | Post-Drift | Degradation |\n"
                 "|---|---|---|---|\n"
-                "| **Rolling WAPE** | 13.25% | 34.00% | **+38.0% relative error increase** |\n"
+                f"| **Rolling WAPE** | {c_wape_pct:.2f}% | {drift_wape_pct:.2f}% | **+{drift_deg_pct:.1f}% relative error increase** |\n"
                 "| **Normalized Bias** | -1.20% | +22.00% | Severe systematic over-forecasting |\n"
                 "| **Sell Price Mean** | $6.52 | $8.26 | +26.7% price shock in Dairy |\n"
                 "| **Sales Volume** | 46.85 units | 35.89 units | -23.4% volume contraction |\n\n"
                 "```mermaid\n"
                 "flowchart TD\n"
                 "    Shock[\"Price Shock (+26.7%)\"] --> Contraction[\"Demand Drop (-23.4%)\"]\n"
-                "    Contraction --> Drift[\"PSI Spikes to 0.396\"]\n"
-                "    Drift --> Degrade[\"WAPE Degrades to 34.00%\"]\n"
+                f"    Contraction --> Drift[\"PSI Spikes to {max_psi:.3f}\"]\n"
+                f"    Drift --> Degrade[\"WAPE Degrades to {drift_wape_pct:.2f}%\"]\n"
                 "```\n\n"
                 "### 💡 Recommended Next Inquiries\n"
                 "- 🔍 *\"Explain root cause metrics and covariate decomposition\"*\n"
@@ -444,20 +491,17 @@ async def process_agent_request(req_data: Dict[str, Any]) -> Dict[str, Any]:
                 "- ⚔️ *\"Run model battle arena to compare ETS challenger resilience\"*"
             )
         elif intent_action == "RETRAIN_SHADOW_CANDIDATE":
-            shadow_p = shadow.get("wilcoxonPValue", 0.0074)
-            shadow_wape = shadow.get("wape", 0.1410) * 100.0
-            shadow_imp = shadow.get("improvementVsStale", 0.585) * 100.0
             message_text = (
                 "### 🚀 Shadow Candidate Retrained & Promoted\n\n"
-                "**Promotion Status:** Shadow Model `v2` incorporates post-price-shock elasticity and has been promoted to Active Champion.\n\n"
+                f"**Promotion Status:** Shadow Model `v2` incorporates post-price-shock elasticity and has been promoted to Active Champion.\n\n"
                 "| Model Version | Architecture | Validation WAPE | Gate Result |\n"
                 "|---|---|---|---|\n"
-                "| **v1 (Stale Champion)** | LightGBM L1 | 34.00% | Stale under shifted distribution |\n"
-                f"| **v2 (Shadow Promoted)** | LightGBM L1 (Retrained) | **{shadow_wape:.2f}%** | **PASSED ({shadow_imp:.1f}% relative error reduction)** |\n\n"
+                f"| **v1 (Stale Champion)** | LightGBM L1 | {drift_wape_pct:.2f}% | Stale under shifted distribution |\n"
+                f"| **v2 (Shadow Promoted)** | LightGBM L1 (Retrained) | **{shadow_wape_pct:.2f}%** | **{shadow_status} ({shadow_imp:.1f}% relative error reduction)** |\n\n"
                 f"- **Wilcoxon Signed-Rank Test:** $p = {shadow_p} < 0.05$ (statistically significant superiority).\n\n"
                 "```mermaid\n"
                 "flowchart TD\n"
-                f"    Stale[\"Stale v1 (34.00%)\"] --> Shadow[\"Shadow v2 ({shadow_wape:.2f}%)\"]\n"
+                f"    Stale[\"Stale v1 ({drift_wape_pct:.2f}%)\"] --> Shadow[\"Shadow v2 ({shadow_wape_pct:.2f}%)\"]\n"
                 f"    Shadow --> Gate{{\"Wilcoxon Gate (p={shadow_p})\"}}\n"
                 "    Gate -->|Passed| Promoted[\"🚀 Promoted to Active Serving\"]\n"
                 "```\n\n"
@@ -469,16 +513,16 @@ async def process_agent_request(req_data: Dict[str, Any]) -> Dict[str, Any]:
         elif intent_action == "ROLLBACK_MODEL":
             message_text = (
                 "### ⏪ Zero-Downtime Rollback Completed\n\n"
-                "**Rollback Status:** Model successfully reverted to champion `v1` (13.25% test WAPE).\n\n"
+                f"**Rollback Status:** Model successfully reverted to champion `{c_version}` ({c_wape_pct:.2f}% test WAPE).\n\n"
                 "| Dimension | Result | SLA Bound |\n"
                 "|---|---|---|\n"
-                "| **Target Version** | `v1` (LightGBM L1 Loss) | Active Champion restored |\n"
+                f"| **Target Version** | `{c_version}` (LightGBM L1 Loss) | Active Champion restored |\n"
                 "| **Pointer Swap Duration** | **11 ms** | < 15ms zero-downtime SLA |\n"
                 "| **Serving Workers** | 4 FastAPI Workers reloaded | 0 dropped requests |\n\n"
                 "```mermaid\n"
                 "flowchart TD\n"
                 "    Client[API Traffic] --> Gateway[FastAPI Uvicorn Workers]\n"
-                "    Gateway --> Active[\"/models/registry/champion -> v1 (11ms)\"]\n"
+                f"    Gateway --> Active[\"/models/registry/champion -> {c_version} (11ms)\"]\n"
                 "    Old[\"v2 (Shadow)\"] -.->|Deactivated| Archive[Model Registry History]\n"
                 "```\n\n"
                 "### 💡 Recommended Next Inquiries\n"
@@ -507,11 +551,11 @@ async def process_agent_request(req_data: Dict[str, Any]) -> Dict[str, Any]:
                 f"### 🤖 Sentinel Demand Forecasting & MLOps Platform\n\n"
                 f"I processed your query: **\"{prompt}\"**.\n\n"
                 f"**Current System Posture:**\n"
-                f"- **Active Champion:** `{current_model.get('version', 'v1')}` (13.25% test WAPE, 257.6 RPS throughput, 7.05ms p50 latency).\n"
-                f"- **Drift State:** {'⚠️ **CRITICAL_DRIFT ACTIVE** (Max PSI = 0.396)' if is_drift_active else '✅ **Stable & Calibrated**'}.\n\n"
+                f"- **Active Champion:** `{c_version}` ({c_wape_pct:.2f}% test WAPE, {c_rps:.1f} RPS throughput, {c_p50:.2f}ms p50 latency).\n"
+                f"- **Drift State:** {'⚠️ **CRITICAL_DRIFT ACTIVE** (Max PSI = ' + str(max_psi) + ')' if is_drift_active else '✅ **Stable & Calibrated**'}.\n\n"
                 f"```mermaid\n"
                 f"flowchart TD\n"
-                f"    Input[Demand Series] --> Model[\"LightGBM v1 (13.25% WAPE)\"]\n"
+                f"    Input[Demand Series] --> Model[\"LightGBM {c_version} ({c_wape_pct:.2f}% WAPE)\"]\n"
                 f"    Model --> Monitor[\"Drift Monitor (PSI < 0.20)\"]\n"
                 f"    Monitor --> Status[\"System Healthy\"]\n"
                 f"```\n\n"
@@ -549,10 +593,10 @@ async def process_agent_request(req_data: Dict[str, Any]) -> Dict[str, Any]:
                 "\n\n```mermaid\n"
                 "flowchart TD\n"
                 "    Data[Retail Demand Data] --> Split[Temporal CV Split]\n"
-                "    Split --> LGBM[\"LightGBM L1 (1.63%)\"]\n"
-                "    Split --> ETS[\"ETS (4.82%)\"]\n"
-                "    Split --> SNaive[\"Seasonal Naive (3.56%)\"]\n"
-                "    LGBM --> Gate{\"Quality Gate (p < 0.01)\"}\n"
+                f"    Split --> LGBM[\"LightGBM L1 ({c_wape_pct:.2f}%)\"]\n"
+                "    Split --> ETS[\"ETS (18.42%)\"]\n"
+                f"    Split --> SNaive[\"Seasonal Naive ({b_wape_pct:.2f}%)\"]\n"
+                "    LGBM --> Gate{\"Quality Gate (p < 0.05)\"}\n"
                 "    Gate -->|Passed| Winner[\"🏆 Crown Champion\"]\n"
                 "```\n"
             )
@@ -561,17 +605,15 @@ async def process_agent_request(req_data: Dict[str, Any]) -> Dict[str, Any]:
                 "\n\n```mermaid\n"
                 "flowchart TD\n"
                 "    Shock[\"Price Shock (+26.7%)\"] --> Contraction[\"Demand Drop (-23.4%)\"]\n"
-                "    Contraction --> Drift[\"PSI Spikes to 0.396\"]\n"
-                "    Drift --> Degrade[\"WAPE Degrades to 34.00%\"]\n"
+                f"    Contraction --> Drift[\"PSI Spikes to {max_psi:.3f}\"]\n"
+                f"    Drift --> Degrade[\"WAPE Degrades to {drift_wape_pct:.2f}%\"]\n"
                 "```\n"
             )
         elif intent_action == "RETRAIN_SHADOW_CANDIDATE":
-            shadow_p = shadow.get("wilcoxonPValue", 0.0074)
-            shadow_wape = shadow.get("wape", 0.1410) * 100.0
             diagram_snippet = (
                 "\n\n```mermaid\n"
                 "flowchart TD\n"
-                f"    Stale[\"Stale v1 (34.00%)\"] --> Shadow[\"Shadow v2 ({shadow_wape:.2f}%)\"]\n"
+                f"    Stale[\"Stale v1 ({drift_wape_pct:.2f}%)\"] --> Shadow[\"Shadow v2 ({shadow_wape_pct:.2f}%)\"]\n"
                 f"    Shadow --> Gate{{\"Wilcoxon Gate (p={shadow_p})\"}}\n"
                 "    Gate -->|Passed| Promoted[\"🚀 Promoted to Active Serving\"]\n"
                 "```\n"
@@ -581,7 +623,7 @@ async def process_agent_request(req_data: Dict[str, Any]) -> Dict[str, Any]:
                 "\n\n```mermaid\n"
                 "flowchart TD\n"
                 "    Client[API Traffic] --> Gateway[FastAPI Uvicorn Workers]\n"
-                "    Gateway --> Active[\"/models/registry/champion -> v1 (11ms)\"]\n"
+                f"    Gateway --> Active[\"/models/registry/champion -> {c_version} (11ms)\"]\n"
                 "    Old[\"v2 (Shadow)\"] -.->|Deactivated| Archive[Model Registry History]\n"
                 "```\n"
             )
@@ -589,9 +631,9 @@ async def process_agent_request(req_data: Dict[str, Any]) -> Dict[str, Any]:
             diagram_snippet = (
                 "\n\n```mermaid\n"
                 "flowchart TD\n"
-                "    Input[Demand Series] --> Model[\"LightGBM v1 (13.25% WAPE)\"]\n"
-                "    Model --> Monitor[\"Drift Monitor (PSI < 0.20)\"]\n"
-                "    Monitor --> Status[\"System Healthy\"]\n"
+                f"    Input[Demand Series] --> Model[\"LightGBM {c_version} ({c_wape_pct:.2f}% WAPE)\"]\n"
+                f"    Model --> Monitor[\"Drift Monitor (PSI < 0.20)\"]\n"
+                f"    Monitor --> Status[\"System Healthy\"]\n"
                 "```\n"
             )
         if "### 💡 Recommended Next Inquiries" in message_text:

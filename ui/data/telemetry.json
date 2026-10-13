@@ -1,7 +1,7 @@
 {
   "metadata": {
-    "generatedAt": "2026-10-12T23:15:32.691950+00:00",
-    "gitCommit": "007b7262a536156884eb51bd77fba359fc0cfae2",
+    "generatedAt": "2026-10-12T23:56:00.352854+00:00",
+    "gitCommit": "dbfcea036b4c7cc36da520ac0f087db1682aa77d",
     "randomSeed": 42,
     "measured": true
   },
@@ -14,9 +14,9 @@
     "bias": 0.0011,
     "mae": 6.35,
     "rmse": 8.59,
-    "p50LatencyMs": 1.67,
-    "p95LatencyMs": 2.24,
-    "throughputRps": 598.8,
+    "p50LatencyMs": 2.56,
+    "p95LatencyMs": 4.7,
+    "throughputRps": 390.6,
     "circuitBreakerSlaSeconds": 2.0
   },
   "baseline": {
@@ -98,12 +98,12 @@
     }
   },
   "shadowCandidate": {
-    "version": "v_shadow_20261012_231532",
+    "version": "v_shadow_20261012_235600",
     "name": "LightGBM Shadow (Price-Shifted Slice)",
     "wape": 0.1326,
     "bias": 0.005,
     "improvementVsStale": 0.054,
-    "wilcoxonPValue": 0.0074,
+    "wilcoxonPValue": 0.00455,
     "gateStatus": "PROMOTED"
   }
 }

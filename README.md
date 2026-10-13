@@ -17,8 +17,8 @@ An enterprise-grade, high-availability classical ML demand forecasting and auton
 |---|---|---|---|
 | **Forecast Accuracy (WAPE)** | 42.03% (Naive) / 40.29% (Seasonal Naive) | **13.00% (LightGBM L1)** | **67.7% relative error reduction** |
 | **Normalized Forecast Bias** | +2.05% (Seasonal Naive) | **+0.11%** | Near-zero systematic volume error |
-| **Inference Latency (p50)** | — | **1.67 ms** (FastAPI Container) | Sub-15ms production serving SLA |
-| **Serving Throughput** | — | **598.8 req/sec** | High-concurrency async pipeline |
+| **Inference Latency (p50)** | — | **2.56 ms** (FastAPI Container) | Sub-15ms production serving SLA |
+| **Serving Throughput** | — | **390.6 req/sec** | High-concurrency async pipeline |
 | **Circuit-Breaker SLA** | Unhandled 500 error / freeze | **< 2.0s SLA with Seasonal Fallback** | 100% availability guarantee |
 | **Atomic Rollback SLA** | Manual redeployment (minutes) | **< 15 ms** | Instantaneous filesystem pointer swap |
 | **Drift Monitoring** | Manual dashboard check | **PSI $\ge$ 0.20 + KS $p < 0.05$** | Automated real-time alert trigger |
@@ -43,7 +43,7 @@ An enterprise-grade, high-availability classical ML demand forecasting and auton
 ```mermaid
 flowchart TD
     subgraph Ingestion["1. Ingestion & Custom Onboarding"]
-        DataFeed["M5 Multi-Store Retail Demand Feed"] --> Feat["Feature Pipeline: Lags, Rolling Stats, Price Elasticity"]
+        DataFeed["Synthetic M5-Style Multi-Store Demand Feed"] --> Feat["Feature Pipeline: Lags, Rolling Stats, Price Elasticity"]
         UserCSV["Customer CSV Upload & Bulk Staging Queue"] --> Heuristic["Dynamic Heuristic Parser & Inspector"]
         Heuristic --> Feat
         Feat --> Split["Walk-Forward Temporal Splitter"]
@@ -128,7 +128,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -e .
 
-# Run pytest verification suite (13 passing tests)
+# Run pytest verification suite (43 passing tests across 10 modules)
 pytest tests/
 ```
 
@@ -178,7 +178,7 @@ vercel --prod
 > 🛡️ **Production Token Shield**: In production (`NODE_ENV=production` or `DETERMINISTIC_PROD_MODE=true`), the system automatically runs the **Deterministic Rule-Based Software Engine**. This guarantees **zero external LLM token expenditure ($0.00 spend)**, prevents token abuse, eliminates cold starts ($< 5\text{ms}$ response latency), and provides mathematically verified outputs.
 
 ### 6. GitHub Actions CI/CD Pipeline
-- **`ci.yml`**: Automatically runs on every push and pull request. Sets up a clean environment, installs pytest, executes all 13 test suites without `.venv` caching, and verifies the Next.js production build.
+- **`ci.yml`**: Automatically runs on every push and pull request. Sets up a clean environment, installs pytest, executes all 43 tests across 10 suites without `.venv` caching, and verifies the Next.js production build.
 - **`deploy-vercel.yml`**: Deploys the frontend to Vercel with token protection enabled and `.venv` exclusion enforced.
 
 ### 7. CLI Operations & 2-Minute Demo Script

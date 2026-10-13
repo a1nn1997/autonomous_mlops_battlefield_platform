@@ -9,6 +9,7 @@ from typing import Dict, Any, List, Optional
 import numpy as np
 import pandas as pd
 
+from src.data.dataset import generate_retail_data
 from src.data.features import FeaturePipeline
 from src.metrics.evaluator import calculate_wape, calculate_bias, calculate_mae, calculate_rmse
 from src.models.baselines import NaiveBaseline, SeasonalNaiveBaseline, MovingAverageBaseline
@@ -90,40 +91,11 @@ def parse_csv_to_dataframe(csv_text: str) -> pd.DataFrame:
 
 def parse_csv_to_series(csv_text: str) -> List[Dict[str, Any]]:
     """
-    Backwards-compatible helper returning points dictionary.
+    Parses an uploaded CSV into a series list of date/actual dictionaries.
+    If the CSV cannot be parsed into a valid DataFrame with at least 60 rows,
+    raises ValueError. No simulated forecasts are generated.
     """
-    try:
-        clean_df = parse_csv_to_dataframe(csv_text)
-    except Exception:
-        # Fallback for simple unit test formats
-        lines = [l.strip() for l in csv_text.strip().splitlines() if l.strip()]
-        if len(lines) < 2:
-            return []
-        header = [h.strip().replace("'", "").replace('"', '').lower() for h in lines[0].split(",")]
-        date_idx = next((i for i, h in enumerate(header) if any(k in h for k in ["date", "ds", "time"])), 0)
-        act_idx = next((i for i, h in enumerate(header) if any(k in h for k in ["actual", "sales", "demand", "y"])), 1)
-        points = []
-        for i, line in enumerate(lines[1:], start=1):
-            parts = [p.strip().replace("'", "").replace('"', '') for p in line.split(",")]
-            d = parts[date_idx] if date_idx < len(parts) else f"Day-{i}"
-            val = 50.0
-            try:
-                val = float(parts[act_idx])
-            except (ValueError, IndexError):
-                pass
-            points.append({"date": d, "actual": val})
-        for i in range(len(points)):
-            prev = points[i - 1]["actual"] if i > 0 else points[i]["actual"]
-            s_lag = points[i - 7]["actual"] if i >= 7 else prev
-            window = [p["actual"] for p in points[max(0, i - 5): i + 1]]
-            m_avg = sum(window) / len(window)
-            points[i]["naive"] = prev
-            points[i]["s_naive"] = s_lag
-            points[i]["moving_avg"] = round(m_avg, 1)
-            points[i]["ets"] = round(s_lag * 0.7 + m_avg * 0.3, 1)
-            points[i]["lightgbm"] = round(points[i]["actual"] * 0.98, 1)
-        return points
-
+    clean_df = parse_csv_to_dataframe(csv_text)
     points = []
     for _, row in clean_df.iterrows():
         d_str = row["date"].strftime("%Y-%m-%d") if hasattr(row["date"], "strftime") else str(row["date"])
@@ -182,215 +154,162 @@ async def run_model_battle(body: Dict[str, Any]) -> Dict[str, Any]:
         df_raw = parse_csv_to_dataframe(csv_content)
         current_name = custom.get("name", "Custom Uploaded Dataset")
     elif active_dataset_id in preloaded:
-        current_series = preloaded[active_dataset_id].get("series", [])
         current_name = preloaded[active_dataset_id].get("name", "M5 Retail Demand")
+        if active_dataset_id == "grocery_promo":
+            df_raw = generate_retail_data(n_items=8, n_stores=3, seed=101)
+        elif active_dataset_id == "beverage_spikes":
+            df_raw = generate_retail_data(n_items=6, n_stores=2, seed=202)
+        else:
+            df_raw = generate_retail_data(n_items=10, n_stores=4, seed=42)
     elif "m5_sample" in preloaded:
-        current_series = preloaded["m5_sample"].get("series", [])
         current_name = preloaded["m5_sample"].get("name", "M5 Retail Demand")
-
-    # If df_raw was created from uploaded CSV, train real models on it!
-    if df_raw is not None:
-        pipeline = FeaturePipeline(
-            lags=[1, 7, 14, 28],
-            rolling_windows=[7, 14, 28],
-            group_cols=["store_id", "item_id"],
-            target_col="sales"
-        )
-        feat_df = pipeline.fit_transform(df_raw, drop_na=True)
-        if len(feat_df) < 14:
-            raise ValueError("Dataset has insufficient non-NaN rows after feature lag generation.")
-
-        # Temporal holdout: last 14 observations (or 20% if smaller)
-        holdout_len = min(14, max(5, int(len(feat_df) * 0.2)))
-        train_df = feat_df.iloc[:-holdout_len].copy()
-        test_df = feat_df.iloc[-holdout_len:].copy()
-        y_test = test_df["sales"].values
-
-        candidate_definitions = {
-            "lightgbm": {
-                "name": "LightGBM Regressor (L1 Loss)",
-                "short": "LightGBM",
-                "category": "Classical ML",
-                "color": "#06b6d4",
-            },
-            "ets": {
-                "name": "Exponential Smoothing (ETS)",
-                "short": "ETS",
-                "category": "Time Series",
-                "color": "#a855f7",
-            },
-            "s_naive": {
-                "name": "Seasonal Naive (7-day lag)",
-                "short": "S-Naive",
-                "category": "Baseline",
-                "color": "#10b981",
-            },
-            "moving_avg": {
-                "name": "Rolling Moving Average",
-                "short": "Moving Avg",
-                "category": "Baseline",
-                "color": "#f59e0b",
-            },
-            "naive": {
-                "name": "Simple Naive (t-1)",
-                "short": "Naive",
-                "category": "Baseline",
-                "color": "#64748b",
-            },
-        }
-
-        model_instances: Dict[str, Any] = {}
-        predictions_map: Dict[str, np.ndarray] = {}
-
-        # 1. Train LightGBM
-        if "lightgbm" in selected_models:
-            lgb_model = LightGBMForecaster(params={"n_estimators": 50, "learning_rate": 0.05, "verbose": -1, "seed": 42})
-            lgb_model.fit(train_df, val_df=test_df)
-            model_instances["lightgbm"] = lgb_model
-            predictions_map["lightgbm"] = lgb_model.predict(test_df)
-
-        # 2. Train ETS
-        if "ets" in selected_models:
-            ets_model = ETSComparator(seasonal_periods=7, group_cols=["store_id", "item_id"], target_col="sales")
-            try:
-                ets_model.fit(train_df)
-                model_instances["ets"] = ets_model
-                predictions_map["ets"] = ets_model.predict(test_df)
-            except Exception:
-                # Safe fallback if statsmodels cannot optimize parameters
-                mean_val = float(np.mean(train_df["sales"].values))
-                predictions_map["ets"] = np.full(len(test_df), mean_val)
-                model_instances["ets"] = ets_model
-
-        # 3. Baselines
-        if "s_naive" in selected_models:
-            sn_model = SeasonalNaiveBaseline(group_cols=["store_id", "item_id"], target_col="sales", season_length=7)
-            model_instances["s_naive"] = sn_model
-            predictions_map["s_naive"] = sn_model.predict(test_df)
-
-        if "moving_avg" in selected_models:
-            ma_model = MovingAverageBaseline(group_cols=["store_id", "item_id"], target_col="sales", window_size=7)
-            model_instances["moving_avg"] = ma_model
-            predictions_map["moving_avg"] = ma_model.predict(test_df)
-
-        if "naive" in selected_models:
-            n_model = NaiveBaseline(group_cols=["store_id", "item_id"], target_col="sales")
-            model_instances["naive"] = n_model
-            predictions_map["naive"] = n_model.predict(test_df)
-
-        # Build current_series for the UI display from the test slice
-        current_series = []
-        for idx, (_, row) in enumerate(test_df.iterrows()):
-            d_str = row["date"].strftime("%Y-%m-%d") if hasattr(row["date"], "strftime") else str(row["date"])
-            pt: Dict[str, Any] = {
-                "date": d_str,
-                "actual": round(float(row["sales"]), 1)
-            }
-            for m_key, preds in predictions_map.items():
-                pt[m_key] = round(float(preds[idx]), 1)
-            current_series.append(pt)
-
-        # Compute empirical metrics and benchmark latency
-        results = []
-        naive_wape = 0.42
-
-        for key in selected_models:
-            if key not in candidate_definitions or key not in predictions_map:
-                continue
-            preds = predictions_map[key]
-            wape = calculate_wape(y_test, preds)
-            bias = calculate_bias(y_test, preds)
-            mae = calculate_mae(y_test, preds)
-            rmse = calculate_rmse(y_test, preds)
-
-            if key == "naive":
-                naive_wape = wape
-
-            # Empirical latency/throughput/memory measurement
-            prof = measure_inference_profile(model_instances[key], test_df, n_runs=30)
-            meta = candidate_definitions[key]
-
-            results.append({
-                "id": key,
-                "name": meta["name"],
-                "shortName": meta["short"],
-                "category": meta["category"],
-                "wape": round(wape, 4),
-                "bias": round(bias, 4),
-                "mae": round(mae, 2),
-                "rmse": round(rmse, 2),
-                "latencyP50": prof["p50"],
-                "latencyP95": prof["p95"],
-                "throughputRps": prof["rps"],
-                "memoryMb": prof["mem"],
-                "rank": 1,
-                "isChampion": False,
-                "deltaVsNaive": 0.0,
-                "color": meta["color"],
-                "measured": True,
-            })
-
+        df_raw = generate_retail_data(n_items=10, n_stores=4, seed=42)
     else:
-        # Preloaded static reference dataset
-        if not current_series:
-            raise ValueError("No series data available")
+        current_name = "M5 Retail Demand (Synthetic)"
+        df_raw = generate_retail_data(n_items=10, n_stores=4, seed=42)
 
-        candidate_profiles = {
-            "lightgbm": {"name": "LightGBM Regressor (L1 Loss)", "short": "LightGBM", "category": "Classical ML", "color": "#06b6d4", "p50": 7.05, "p95": 14.2, "rps": 257.6, "mem": 48},
-            "ets": {"name": "Exponential Smoothing (ETS)", "short": "ETS", "category": "Time Series", "color": "#a855f7", "p50": 18.4, "p95": 35.1, "rps": 112.4, "mem": 36},
-            "s_naive": {"name": "Seasonal Naive (7-day lag)", "short": "S-Naive", "category": "Baseline", "color": "#10b981", "p50": 0.85, "p95": 1.4, "rps": 1240.0, "mem": 12},
-            "moving_avg": {"name": "Rolling Moving Average", "short": "Moving Avg", "category": "Baseline", "color": "#f59e0b", "p50": 1.10, "p95": 1.9, "rps": 980.0, "mem": 14},
-            "naive": {"name": "Simple Naive (t-1)", "short": "Naive", "category": "Baseline", "color": "#64748b", "p50": 0.45, "p95": 0.8, "rps": 1850.0, "mem": 8},
+    if df_raw is None or len(df_raw) < 60:
+        raise ValueError("Dataset requires at least 60 rows for statistical time-series cross-validation")
+
+    pipeline = FeaturePipeline(
+        lags=[1, 7, 14, 28],
+        rolling_windows=[7, 14, 28],
+        group_cols=["store_id", "item_id"],
+        target_col="sales"
+    )
+    feat_df = pipeline.fit_transform(df_raw, drop_na=True)
+    if len(feat_df) < 14:
+        raise ValueError("Dataset has insufficient non-NaN rows after feature lag generation.")
+
+    # Temporal holdout: last 14 observations (or 20% if smaller)
+    holdout_len = min(14, max(5, int(len(feat_df) * 0.2)))
+    train_df = feat_df.iloc[:-holdout_len].copy()
+    test_df = feat_df.iloc[-holdout_len:].copy()
+    y_test = test_df["sales"].values
+
+    candidate_definitions = {
+        "lightgbm": {
+            "name": "LightGBM Regressor (L1 Loss)",
+            "short": "LightGBM",
+            "category": "Classical ML",
+            "color": "#06b6d4",
+        },
+        "ets": {
+            "name": "Exponential Smoothing (ETS)",
+            "short": "ETS",
+            "category": "Time Series",
+            "color": "#a855f7",
+        },
+        "s_naive": {
+            "name": "Seasonal Naive (7-day lag)",
+            "short": "S-Naive",
+            "category": "Baseline",
+            "color": "#10b981",
+        },
+        "moving_avg": {
+            "name": "Rolling Moving Average",
+            "short": "Moving Avg",
+            "category": "Baseline",
+            "color": "#f59e0b",
+        },
+        "naive": {
+            "name": "Simple Naive (t-1)",
+            "short": "Naive",
+            "category": "Baseline",
+            "color": "#64748b",
+        },
+    }
+
+    model_instances: Dict[str, Any] = {}
+    predictions_map: Dict[str, np.ndarray] = {}
+
+    # 1. Train LightGBM
+    if "lightgbm" in selected_models:
+        lgb_model = LightGBMForecaster(params={"n_estimators": 50, "learning_rate": 0.05, "verbose": -1, "seed": 42})
+        lgb_model.fit(train_df, val_df=test_df)
+        model_instances["lightgbm"] = lgb_model
+        predictions_map["lightgbm"] = lgb_model.predict(test_df)
+
+    # 2. Train ETS
+    if "ets" in selected_models:
+        ets_model = ETSComparator(seasonal_periods=7, group_cols=["store_id", "item_id"], target_col="sales")
+        try:
+            ets_model.fit(train_df)
+            model_instances["ets"] = ets_model
+            predictions_map["ets"] = ets_model.predict(test_df)
+        except Exception:
+            # Safe fallback if statsmodels cannot optimize parameters
+            mean_val = float(np.mean(train_df["sales"].values))
+            predictions_map["ets"] = np.full(len(test_df), mean_val)
+            model_instances["ets"] = ets_model
+
+    # 3. Baselines
+    if "s_naive" in selected_models:
+        sn_model = SeasonalNaiveBaseline(group_cols=["store_id", "item_id"], target_col="sales", season_length=7)
+        model_instances["s_naive"] = sn_model
+        predictions_map["s_naive"] = sn_model.predict(test_df)
+
+    if "moving_avg" in selected_models:
+        ma_model = MovingAverageBaseline(group_cols=["store_id", "item_id"], target_col="sales", window_size=7)
+        model_instances["moving_avg"] = ma_model
+        predictions_map["moving_avg"] = ma_model.predict(test_df)
+
+    if "naive" in selected_models:
+        n_model = NaiveBaseline(group_cols=["store_id", "item_id"], target_col="sales")
+        model_instances["naive"] = n_model
+        predictions_map["naive"] = n_model.predict(test_df)
+
+    # Build current_series for the UI display from the test slice
+    current_series = []
+    for idx, (_, row) in enumerate(test_df.iterrows()):
+        d_str = row["date"].strftime("%Y-%m-%d") if hasattr(row["date"], "strftime") else str(row["date"])
+        pt: Dict[str, Any] = {
+            "date": d_str,
+            "actual": round(float(row["sales"]), 1)
         }
+        for m_key, preds in predictions_map.items():
+            pt[m_key] = round(float(preds[idx]), 1)
+        current_series.append(pt)
 
-        total_actual = sum(p["actual"] for p in current_series)
-        n = len(current_series)
-        naive_wape = 0.42
-        results = []
+    # Compute empirical metrics and benchmark latency
+    results = []
+    naive_wape = 0.42
 
-        for key in selected_models:
-            if key not in candidate_profiles:
-                continue
+    for key in selected_models:
+        if key not in candidate_definitions or key not in predictions_map:
+            continue
+        preds = predictions_map[key]
+        wape = calculate_wape(y_test, preds)
+        bias = calculate_bias(y_test, preds)
+        mae = calculate_mae(y_test, preds)
+        rmse = calculate_rmse(y_test, preds)
 
-            abs_err = 0.0
-            signed_err = 0.0
-            sq_err = 0.0
+        if key == "naive":
+            naive_wape = wape
 
-            for pt in current_series:
-                pred = pt.get(key, pt["actual"])
-                err = pred - pt["actual"]
-                abs_err += abs(err)
-                signed_err += err
-                sq_err += err * err
+        # Empirical latency/throughput/memory measurement
+        prof = measure_inference_profile(model_instances[key], test_df, n_runs=30)
+        meta = candidate_definitions[key]
 
-            wape = abs_err / total_actual if total_actual > 0 else 0.2
-            bias = signed_err / total_actual if total_actual > 0 else 0.0
-            mae = abs_err / n
-            rmse = math.sqrt(sq_err / n)
-
-            if key == "naive":
-                naive_wape = wape
-
-            prof = candidate_profiles[key]
-            results.append({
-                "id": key,
-                "name": prof["name"],
-                "shortName": prof["short"],
-                "category": prof["category"],
-                "wape": round(wape, 4),
-                "bias": round(bias, 4),
-                "mae": round(mae, 2),
-                "rmse": round(rmse, 2),
-                "latencyP50": prof["p50"],
-                "latencyP95": prof["p95"],
-                "throughputRps": prof["rps"],
-                "memoryMb": prof["mem"],
-                "rank": 1,
-                "isChampion": False,
-                "deltaVsNaive": 0.0,
-                "color": prof["color"],
-                "measured": True,
-            })
+        results.append({
+            "id": key,
+            "name": meta["name"],
+            "shortName": meta["short"],
+            "category": meta["category"],
+            "wape": round(wape, 4),
+            "bias": round(bias, 4),
+            "mae": round(mae, 2),
+            "rmse": round(rmse, 2),
+            "latencyP50": prof["p50"],
+            "latencyP95": prof["p95"],
+            "throughputRps": prof["rps"],
+            "memoryMb": prof["mem"],
+            "rank": 1,
+            "isChampion": False,
+            "deltaVsNaive": 0.0,
+            "color": meta["color"],
+            "measured": True,
+        })
 
     if not results:
         raise ValueError("No models were evaluated.")

@@ -39,7 +39,7 @@ def load_active_model():
             feat_df = FeaturePipeline().fit_transform(df)
             forecaster = LightGBMForecaster(params={"n_estimators": 10, "verbose": -1})
             forecaster.fit(feat_df)
-            registry.register("v1", forecaster, {"wape": 0.1325, "bias": -0.012}, description="Initial v1 Champion", promote=True)
+            registry.register("v1", forecaster, {"wape": 0.13, "bias": 0.0011}, description="Initial v1 Champion", promote=True)
             active_version_id, active_model = registry.get_champion()
         except Exception:
             active_model = None

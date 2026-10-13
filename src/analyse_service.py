@@ -1,5 +1,7 @@
 import math
 import time
+import json
+from pathlib import Path
 import numpy as np
 import pandas as pd
 from typing import Dict, Any, List
@@ -91,7 +93,7 @@ async def process_analyse_request(body: Dict[str, Any]) -> Dict[str, Any]:
                 "name": "Pareto Balanced",
                 "badge": "Production Default",
                 "targetWape": "6.8% - 9.4%",
-                "targetLatencyMs": 7.05,
+                "targetLatencyMs": 6.8,
                 "maxRps": 280,
                 "memoryMb": 48,
                 "architecture": "Standard LightGBM L1 + Dynamic Circuit Breaker",
@@ -179,8 +181,8 @@ async def process_analyse_request(body: Dict[str, Any]) -> Dict[str, Any]:
                 y_test = test_slice["sales"].values
                 gate = evaluate_promotion_gate(
                     y_true=y_test,
-                    champ_preds=chal_test_preds,  # Test if challenger outperforms champion
-                    chal_preds=champ_test_preds,
+                    champ_preds=champ_test_preds,  # Incumbent champion
+                    chal_preds=chal_test_preds,    # Candidate challenger
                     wilcoxon_alpha=settings.drift.ks_significance_level,
                     max_absolute_bias=0.05
                 )
@@ -190,10 +192,11 @@ async def process_analyse_request(body: Dict[str, Any]) -> Dict[str, Any]:
                     act = float(row["sales"])
                     c_p = round(float(champ_test_preds[idx]), 1)
                     ch_p = round(float(chal_test_preds[idx]), 1)
+                    optimal = ch_p if gate["is_promoted"] else c_p
                     scored_points.append({
                         "date": d_str,
                         "actual": act,
-                        "optimalForecast": c_p,
+                        "optimalForecast": optimal,
                         "champion": c_p,
                         "challenger": ch_p,
                     })
@@ -211,7 +214,7 @@ async def process_analyse_request(body: Dict[str, Any]) -> Dict[str, Any]:
                         "bias": round(champ_bias, 4),
                         "latencyMs": max(1.2, lgbm_lat),
                         "rps": round(1000.0 / max(0.1, lgbm_lat), 1),
-                        "status": "WINNER_PROMOTED" if gate["is_promoted"] else "RETAINED_ONLINE",
+                        "status": "CHAMPION_DEMOTED" if gate["is_promoted"] else "RETAINED_ONLINE",
                     },
                     "challenger": {
                         "name": "ETS Exponential Smoothing",
@@ -219,7 +222,7 @@ async def process_analyse_request(body: Dict[str, Any]) -> Dict[str, Any]:
                         "bias": round(chal_bias, 4),
                         "latencyMs": max(2.5, ets_lat),
                         "rps": round(1000.0 / max(0.1, ets_lat), 1),
-                        "status": "CHALLENGER_REJECTED" if gate["is_promoted"] else "CHALLENGER_PROMOTED",
+                        "status": "CHALLENGER_PROMOTED" if gate["is_promoted"] else "CHALLENGER_REJECTED",
                     },
                     "gateResult": {
                         "wilcoxonPValue": gate["wilcoxon_p_value"],
@@ -243,14 +246,13 @@ async def process_analyse_request(body: Dict[str, Any]) -> Dict[str, Any]:
     # Clean fallback for small arrays or non-timeseries structures
     actuals = [float(pt.get("actual", 50.0)) for pt in points]
     y_true = np.array(actuals)
-    # Generate measured forecasts without random simulation
     champ_preds = np.array([round(a * 0.985, 1) for a in actuals])
     chal_preds = np.array([round(a * 0.955, 1) for a in actuals])
 
     gate = evaluate_promotion_gate(
         y_true=y_true,
-        champ_preds=chal_preds,
-        chal_preds=champ_preds,
+        champ_preds=champ_preds,  # Incumbent champion
+        chal_preds=chal_preds,    # Candidate challenger
         wilcoxon_alpha=settings.drift.ks_significance_level,
         max_absolute_bias=0.05
     )
@@ -259,10 +261,11 @@ async def process_analyse_request(body: Dict[str, Any]) -> Dict[str, Any]:
         act = actuals[i]
         champ = float(champ_preds[i])
         chal = float(chal_preds[i])
+        optimal = chal if gate["is_promoted"] else champ
         scored_points.append({
             "date": pt.get("date", f"Day-{i+1}"),
             "actual": act,
-            "optimalForecast": champ,
+            "optimalForecast": optimal,
             "champion": champ,
             "challenger": chal,
         })
@@ -272,23 +275,38 @@ async def process_analyse_request(body: Dict[str, Any]) -> Dict[str, Any]:
     ch_wape = calculate_wape(y_true, chal_preds)
     ch_bias = calculate_bias(y_true, chal_preds)
 
+    t_data = {}
+    for tp in [Path("data/telemetry.json"), Path("../data/telemetry.json"), Path("ui/data/telemetry.json")]:
+        if tp.exists():
+            try:
+                t_data = json.loads(tp.read_text(encoding="utf-8"))
+                break
+            except Exception:
+                pass
+    c_p50 = float(t_data.get("activeChampion", {}).get("p50LatencyMs", 1.8))
+    c_rps = float(t_data.get("activeChampion", {}).get("throughputRps", 550.0))
+    ch_p50 = round(c_p50 * 2.5, 2)
+    ch_rps = round(c_rps / 2.5, 1)
+
     return {
         "status": "SUCCESS",
         "champion": {
             "name": "LightGBM Regressor (L1 Loss)",
             "wape": round(c_wape, 4),
             "bias": round(c_bias, 4),
-            "latencyMs": 4.8 if profile_id == "latency" else 7.05,
-            "rps": 650.0 if profile_id == "latency" else 257.6,
-            "status": "WINNER_PROMOTED",
+            "latencyMs": c_p50,
+            "rps": c_rps,
+            "status": "CHAMPION_DEMOTED" if gate["is_promoted"] else "RETAINED_ONLINE",
+            "estimate": True,
         },
         "challenger": {
             "name": "ETS Exponential Smoothing",
             "wape": round(ch_wape, 4),
             "bias": round(ch_bias, 4),
-            "latencyMs": 18.2,
-            "rps": 110.0,
-            "status": "CHALLENGER_REJECTED",
+            "latencyMs": ch_p50,
+            "rps": ch_rps,
+            "status": "CHALLENGER_PROMOTED" if gate["is_promoted"] else "CHALLENGER_REJECTED",
+            "estimate": True,
         },
         "gateResult": {
             "wilcoxonPValue": gate["wilcoxon_p_value"],
@@ -304,5 +322,6 @@ async def process_analyse_request(body: Dict[str, Any]) -> Dict[str, Any]:
         },
         "scoredPoints": scored_points,
         "tradeoffUsed": profile_id,
-        "measured": True,
+        "measured": False,
+        "estimate": True,
     }

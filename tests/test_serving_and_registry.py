@@ -23,7 +23,7 @@ def client():
         feat_df = pipeline.fit_transform(raw_df)
         m = LightGBMForecaster(params={"n_estimators": 10, "verbose": -1})
         m.fit(feat_df)
-        serving_module.registry.register("v1", m, {"wape": 0.1325}, description="Fixture v1", promote=True)
+        serving_module.registry.register("v1", m, {"wape": 0.13}, description="Fixture v1", promote=True)
         load_active_model()
     return TestClient(app)
 

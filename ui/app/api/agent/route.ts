@@ -70,7 +70,7 @@ export async function POST(req: Request) {
       toolCalls: [
         {
           tool: action === "RUN_MODEL_BATTLE" ? "tournament.evaluate_candidate_pool" : action === "EXECUTE_DRIFT_SIMULATION" ? "simulation.inject_price_shock" : "telemetry.query_live_posture",
-          resultSummary: action === "RUN_MODEL_BATTLE" ? "Evaluated 5 candidates across 28-day CV window. Champion: LightGBM (1.63% WAPE)." : "Deterministic posture active.",
+          resultSummary: action === "RUN_MODEL_BATTLE" ? "Evaluated 5 candidates across 28-day CV window. Champion: LightGBM (13.00% WAPE)." : "Deterministic posture active.",
           durationMs: 12,
           status: "success",
         }

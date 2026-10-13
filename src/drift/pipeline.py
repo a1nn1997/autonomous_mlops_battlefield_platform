@@ -128,5 +128,6 @@ class RetrainingPipeline:
                 "wape_improvement_pct": round(wape_improvement * 100, 2)
             },
             "gate_decision": gate_decision,
+            "gate_result": gate_res,
             "new_active_version": candidate_version if promote else active_version
         }

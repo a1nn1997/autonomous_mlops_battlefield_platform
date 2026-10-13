@@ -73,8 +73,8 @@ const SAMPLE_LIVE_DATASET = {
 export default function Home() {
   const [activeModel, setActiveModel] = useState({
     version: "v1",
-    wape: 0.1325,
-    bias: -0.012,
+    wape: 0.13,
+    bias: 0.0011,
     status: "champion",
   });
   const [previousVersion, setPreviousVersion] = useState("v1");

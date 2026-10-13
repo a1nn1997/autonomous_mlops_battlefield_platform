@@ -153,7 +153,7 @@ sequenceDiagram
     
     alt Inference within SLA (< 15ms)
         Middleware->>Champion: predict(features)
-        Champion-->>Middleware: Output predictions (p50: 7.05ms)
+        Champion-->>Middleware: Output predictions (p50: 2.56ms)
         Middleware-->>Proxy: 200 OK + Forecast Payload
         Proxy-->>Client: Return Predictions
     else Timeout Exceeded (> 2.0s SLA)
